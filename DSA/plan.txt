@@ -1,0 +1,49 @@
+To move from a solid foundation to being **Intermediate-Complete**, you need to bridge the gap between "storing data" and "navigating complex relationships." 
+
+At this level, you aren't just learning a list of names; you’re learning how to pick the right tool to reduce time complexity from $O(n^2)$ down to $O(n \log n)$ or $O(n)$.
+
+---
+
+### 📂 Intermediate Data Structures (DS)
+
+These structures handle more complex data relationships and optimization.
+
+* **Hash Tables / Hash Maps:** The most vital intermediate structure. Learn how to handle "collisions" using chaining or open addressing. (DONE)
+* **Heaps (Min-Heap & Max-Heap):** A specialized tree used to get the minimum or maximum element in $O(1)$ time. (DONE)
+    
+* **Graphs:** Learn **Adjacency Lists** (most common) and **Adjacency Matrices**. This is the leap into non-hierarchical data.
+* **Tries (Prefix Trees):** A tree-like structure used for storing strings to allow for fast "starts-with" or autocomplete searches.
+    
+* **Disjoint Set Union (DSU / Union-Find):** Used to keep track of elements split into several non-overlapping sets. Crucial for Kruskal’s algorithm.
+* **Circular Queues / Deques:** Understanding double-ended queues where you can add/remove from both ends.
+
+---
+
+### ⚙️ Intermediate Algorithms (Algo)
+
+These techniques move away from simple loops and into specialized logic patterns.
+
+#### 1. Graph Algorithms (The "Must-Knows")
+* **BFS (Breadth-First Search):** Used for finding the shortest path in an unweighted graph (like "degrees of separation" on LinkedIn).
+* **DFS (Depth-First Search):** Used for "diving deep" into a path before backtracking (useful for puzzles/mazes).
+    
+* **Dijkstra’s Algorithm:** Finding the shortest path in a **weighted** graph (how GPS/Google Maps works).
+
+#### 2. Pattern-Based Techniques
+* **Sliding Window:** Instead of nested loops, you maintain a "window" that moves across an array. (e.g., "Find the longest substring without repeating characters").
+* **Two Pointers:** Using two indices to traverse an array from different directions or at different speeds (Fast & Slow pointers).
+* **Backtracking:** A refined version of recursion. It explores a path, and if it doesn't work, it "undoes" the last step and tries another (e.g., Solving Sudoku or the N-Queens problem).
+
+#### 3. Introduction to Dynamic Programming (DP)
+This is often considered the "boss level" of intermediate algorithms.
+* **Memoization (Top-Down):** Storing the results of expensive function calls so you don't repeat them.
+* **Tabulation (Bottom-Up):** Building a table of results from the smallest sub-problem up to the main goal.
+    
+
+---
+
+### 🎯 Your "Intermediate" Checklist
+To consider yourself "entirely" covered at this level, you should be able to:
+1.  Explain why a **Hash Map** is better than a **Sorted Array** for lookups.
+2.  Perform a **BFS and DFS** on a graph without looking at a tutorial.
+3.  Identify when a problem can be solved with a **Sliding Window** to avoid $O(n^2)$ time.
