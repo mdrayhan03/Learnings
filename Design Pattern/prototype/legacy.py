@@ -9,7 +9,7 @@ class GameCharacter:
         self.spells = spells
         # Simulate an "expensive" setup (e.g., loading textures/animations)
         print(f"--- Loading heavy assets for {self.name} ---")
-        time.sleep(1) 
+        time.sleep(1)
 
     def __str__(self):
         return f"{self.name} ({self.role}): HP {self.health}, Weapon: {self.weapon}"

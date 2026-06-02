@@ -11,7 +11,7 @@ class File(FileSystemComponent) :
         self.name = name
 
     def display(self, indent=0):
-        print(f"{' ' * indent}File: {self.name}")
+        print(f"|{'-' * indent}File: {self.name}")
 
 # Composite
 class Folder(FileSystemComponent) :
@@ -23,7 +23,7 @@ class Folder(FileSystemComponent) :
         self.contents.append(content)
 
     def display(self, indent=0):
-        print(f"{' ' * indent}Folder: {self.name}")
+        print(f"|{'-' * indent}Folder: {self.name}")
 
         for item in self.contents :
             item.display(indent + 2)

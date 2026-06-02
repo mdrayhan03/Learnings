@@ -6,47 +6,47 @@ There are three types of patterns. They are - **Creational, Structural and Behav
 These deals object creation mechanisms, trying to create objects in a manner suitable to the situation
 
 ***Singleton:** Ensures a class has only **one instance** and provides a global point of access to it. (e.g., a single Database Connection pool or a Configuration manager).
- ```
+ ```python
  class DatabaseConnection:
- _instance = None
+    _instance = None
 
- def __new__(cls):
- if cls._instance is None:
- cls._instance = super().__new__(cls)
- # Initialize connection logic here
- return cls._instance
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        # Initialize connection logic here
+        return cls._instance
  ```
 
 ***Factory Method:** Provides an **interface** for creating objects but allows subclasses to alter the type of objects that will be created.
- ```
+ ```python
  class Dog:
- def speak(self): return "Woof!"
+    def speak(self): return "Woof!"
 
  class Cat:
- def speak(self): return "Meow!"
+    def speak(self): return "Meow!"
 
  def pet_factory(pet_type="dog"):
- pets = {"dog": Dog, "cat": Cat}
- return pets[pet_type]() # Returns an instance
+    pets = {"dog": Dog, "cat": Cat}
+    return pets[pet_type]() # Returns an instance
  ```
 
 ***Abstract Factory:** Lets you produce families of related objects without specifying their concrete classes.
- ```
+ ```python
  class DarkButton:
- def render(self): return "Rendering Dark Button"
+    def render(self): return "Rendering Dark Button"
 
  class LightButton:
- def render(self): return "Rendering Light Button"
+    def render(self): return "Rendering Light Button"
 
  class UIFactory:
- """The Abstract Factory"""
- def create_button(self): pass
+    """The Abstract Factory"""
+    def create_button(self): pass
 
  class DarkThemeFactory(UIFactory):
- def create_button(self): return DarkButton()
+    def create_button(self): return DarkButton()
 
  class LightThemeFactory(UIFactory):
- def create_button(self): return LightButton()
+    def create_button(self): return LightButton()
 
  # Usage
  factory = DarkThemeFactory()
@@ -55,42 +55,42 @@ These deals object creation mechanisms, trying to create objects in a manner sui
  ```
 
 ***Builder:** Used to construct complex objects step-by-step. It’s great when an object has **10+ possible constructor parameters**.
- ```
+ ```python
  class Computer:
- def __init__(self):
- self.ram = None
- self.gpu = None
- self.ssd = None
+    def __init__(self):
+        self.ram = None
+        self.gpu = None
+        self.ssd = None
 
  class ComputerBuilder:
- def __init__(self):
- self.computer = Computer()
+    def __init__(self):
+        self.computer = Computer()
 
- def add_ram(self, size):
- self.computer.ram = size
- return self # Return self for chaining
+    def add_ram(self, size):
+        self.computer.ram = size
+        return self # Return self for chaining
 
- def add_gpu(self, model):
- self.computer.gpu = model
- return self
+    def add_gpu(self, model):
+        self.computer.gpu = model
+        return self
 
- def build(self):
- return self.computer
+    def build(self):
+        return self.computer
 
  # Usage
  pc = ComputerBuilder().add_ram("32GB").add_gpu("RTX 4090").build()
  ```
 
 ***Prototype:** Creates new objects by copying an existing object (cloning).
- ```
+ ```python
  import copy
 
  class Prototype:
- def __init__(self):
- self.data = [i for i in range(1000)] # Expensive setup
+    def __init__(self):
+        self.data = [i for i in range(1000)] # Expensive setup
 
- def clone(self):
- return copy.deepcopy(self)
+    def clone(self):
+        return copy.deepcopy(self)
 
  obj1 = Prototype()
  obj2 = obj1.clone()
@@ -109,16 +109,16 @@ How to create objects without creating a mess of dependencies.
 These deal with how classes and objects are composed to form larger structures.
 
 ***Adapter:** Acts as a wrapper between two incompatible interfaces. It's the "travel plug adapter" of the coding world.
- ```
+ ```python
  class EuropeanSocket:
- def voltage(self): return 230
+    def voltage(self): return 230
 
  class USASocketAdapter:
- def __init__(self, socket):
- self.socket = socket
+    def __init__(self, socket):
+        self.socket = socket
 
- def request_110v(self):
- return self.socket.voltage() - 120 # "Adapting" the result
+    def request_110v(self):
+        return self.socket.voltage() - 120 # "Adapting" the result
 
  # Usage
  euro_socket = EuropeanSocket()
@@ -127,33 +127,33 @@ These deal with how classes and objects are composed to form larger structures.
  ```
 
 ***Decorator:** Dynamically adds new behavior to an object without changing its implementation.
- ```
+ ```python
  def log_call(func):
- def wrapper(*args, **kwargs):
- print(f"Calling {func.__name__}")
- return func(*args, **kwargs)
- return wrapper
+    def wrapper(*args, **kwargs):
+        print(f"Calling {func.__name__}")
+        return func(*args, **kwargs)
+    return wrapper
 
  @log_call
  def my_function():
- print("Hello World")
+    print("Hello World")
  ```
 
 ***Facade:** Provides a simplified interface to a library, a framework, or any other complex set of classes.
- ```
+ ```python
  class CPU:
- def freeze(self): print("Freezing CPU")
+    def freeze(self): print("Freezing CPU")
  class Memory:
- def load(self): print("Loading data")
+    def load(self): print("Loading data")
 
  class ComputerFacade:
- def __init__(self):
- self.cpu = CPU()
- self.mem = Memory()
+    def __init__(self):
+        self.cpu = CPU()
+        self.mem = Memory()
 
- def start(self):
- self.cpu.freeze()
- self.mem.load()
+    def start(self):
+        self.cpu.freeze()
+        self.mem.load()
 
  # Usage
  computer = ComputerFacade()
@@ -161,21 +161,21 @@ These deal with how classes and objects are composed to form larger structures.
  ```
 
 ***Proxy:** Provides a placeholder for another object to control access to it (used for lazy loading or security).
- ```
+ ```python
  class RealImage:
- def __init__(self):
- print("Loading heavy image from disk...")
- def display(self):
- print("Displaying image")
+    def __init__(self):
+        print("Loading heavy image from disk...")
+    def display(self):
+        print("Displaying image")
 
  class ProxyImage:
- def __init__(self):
- self._real_image = None
+    def __init__(self):
+        self._real_image = None
 
- def display(self):
- if self._real_image is None:
- self._real_image = RealImage() # Lazy Loading
- self._real_image.display()
+    def display(self):
+        if self._real_image is None:
+            self._real_image = RealImage() # Lazy Loading
+        self._real_image.display()
  ```
 
 ### GOAL
@@ -193,33 +193,33 @@ How to assemble classes and objects into larger structures.
 These are specifically concerned with **communication between objects**.
 
 ***Observer:** A "subscription" mechanism to notify multiple objects about any events that happen to the object they’re observing. (The heart of MVC and Event-driven UI).
- ```
+ ```python
  class NewsPublisher:
- def __init__(self):
- self._subscribers = []
+    def __init__(self):
+        self._subscribers = []
 
- def attach(self, subscriber):
- self._subscribers.append(subscriber)
+    def attach(self, subscriber):
+        self._subscribers.append(subscriber)
 
- def notify(self, message):
- for sub in self._subscribers:
- sub.update(message)
+    def notify(self, message):
+        for sub in self._subscribers:
+            sub.update(message)
 
  # Usage: news_publisher.notify("Breaking News!")
  ```
 
 ***Strategy:** Defines a family of algorithms, puts each of them into a separate class, and makes their objects interchangeable.
- ```
+ ```python
  def fedex_strategy(price): return price + 10
  def ups_strategy(price): return price + 5
 
  class Order:
- def __init__(self, price, shipping_strategy):
- self.price = price
- self.shipping_strategy = shipping_strategy
+    def __init__(self, price, shipping_strategy):
+        self.price = price
+        self.shipping_strategy = shipping_strategy
 
- def calculate_total(self):
- return self.shipping_strategy(self.price)
+    def calculate_total(self):
+        return self.shipping_strategy(self.price)
 
  # Usage
  order = Order(100, fedex_strategy)
@@ -227,40 +227,40 @@ These are specifically concerned with **communication between objects**.
  ```
 
 ***State:** Allows an object to alter its behavior when its internal state changes.
- ```
+ ```python
  class State:
- def handle(self): pass
+    def handle(self): pass
 
  class OnState(State):
- def handle(self): print("Light is already ON.")
+    def handle(self): print("Light is already ON.")
 
  class OffState(State):
- def handle(self): print("Turning light ON...")
+    def handle(self): print("Turning light ON...")
 
  class LightSwitch:
- def __init__(self):
- self.state = OffState()
+    def __init__(self):
+        self.state = OffState()
 
- def press(self):
- self.state.handle()
- self.state = OnState() # Transition state
+    def press(self):
+        self.state.handle()
+        self.state = OnState() # Transition state
  ```
 
 ***Command:** Turns a request into a stand-alone object that contains all information about the request. This allows for "Undo" functionality.
- ```
+ ```python
  class Light:
- def turn_on(self): print("Light ON")
- def turn_off(self): print("Light OFF")
+    def turn_on(self): print("Light ON")
+    def turn_off(self): print("Light OFF")
 
  class Command:
- def execute(self): pass
- def undo(self): pass
+    def execute(self): pass
+    def undo(self): pass
 
  class TurnOnCommand(Command):
- def __init__(self, light):
- self.light = light
- def execute(self): self.light.turn_on()
- def undo(self): self.light.turn_off()
+    def __init__(self, light):
+        self.light = light
+    def execute(self): self.light.turn_on()
+    def undo(self): self.light.turn_off()
 
  # Usage
  remote = TurnOnCommand(Light())
@@ -268,6 +268,108 @@ These are specifically concerned with **communication between objects**.
  remote.undo()
  ```
 
+ ***Memento:** This pattern is software's "Time Mechine". It allow to capture and restore the internal state of an object without violating **encapsulation**. The three pillars of Memento:
+ 1. Originator: it creates memento and knows how to restore itself from one.
+ 2. Memento: dumb object that stores the state. once created its data should not change
+ 3. Caretaker: it keeps history and holds the list of mementos but never modifies or even looks at what's inside them.
+
+ ```python
+import copy
+
+class Memento:
+    """The Immutable Snapshot"""
+    def __init__(self, state):
+        self._state = copy.deepcopy(state)
+    def get_state(self):
+        return self._state
+
+class Originator:
+    """The object that needs saving/restoring"""
+    def __init__(self, state):
+        self.state = state
+    def save(self):
+        return Memento(self.state)
+    def restore(self, memento):
+        self.state = memento.get_state()
+
+class Caretaker:
+    """The History Manager"""
+    def __init__(self, originator):
+        self._history = []
+        self._originator = originator
+    def backup(self):
+        self._history.append(self._originator.save())
+    def undo(self):
+        if self._history:
+            self._originator.restore(self._history.pop())
+```
+
+***Chains of Responsibility:** Passes a request along a chain of potential handlers. Each handler contains a reference to the next handler. It decides either to process the request or to pass it along the chain. This decouples the sender from the receiver.
+```python
+class Handler:
+    """Abstract interface for handling requests"""
+    def __init__(self, next_handler=None):
+        self._next_handler = next_handler
+
+    def handle(self, request):
+        if self._next_handler:
+            return self._next_handler.handle(request)
+        return None
+
+class TechSupport(Handler):
+    def handle(self, request):
+        if request == "hardware":
+            return "TechSupport: Fixed the hardware issue."
+        return super().handle(request)
+
+class BillingSupport(Handler):
+    def handle(self, request):
+        if request == "payment":
+            return "BillingSupport: Processed the refund."
+        return super().handle(request)
+```
+
+***Visitor:** If a new feature is needed in a group of objects, we use this pattern. It lets you add new operations to existing object structures without modifying the original classes. It uses a technique called Double Dispatch.
+
+```python
+class Place:
+    def accept(self, visitor): pass
+
+class House(Place):
+    def accept(self, visitor): visitor.visit_house(self)
+
+class Bank(Place):
+    def accept(self, visitor): visitor.visit_bank(self)
+
+class InsuranceVisitor:
+    """The new functionality added without touching Place classes"""
+    def visit_house(self, house):
+        print("Calculating house insurance risk...")
+    def visit_bank(self, bank):
+        print("Calculating bank vault insurance risk...")
+```
+
+***Interpreter:** Defines a grammatical representation for a language and provides an interpreter to evaluate it. It represents each rule of the grammar as a class, making it easy to extend the language by adding new classes.
+```python
+class Expression:
+    def interpret(self, context): pass
+
+class Number(Expression):
+    def __init__(self, value):
+        self.value = value
+    def interpret(self, context):
+        return self.value
+
+class Add(Expression):
+    def __init__(self, left, right):
+        self.left = left
+        self.right = right
+    def interpret(self, context):
+        return self.left.interpret(context) + self.right.interpret(context)
+
+# Usage: Add(Number(5), Number(10)).interpret({}) -> 15
+```
+---
 ### GOAL
 How objects communicate and distribute responsibility.
 

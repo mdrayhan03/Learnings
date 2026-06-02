@@ -1,70 +1,62 @@
-# Biomass Regression: Improvement Action Plan
+# 🔬 GoF Design Patterns: Complete Architectural Board Exam
 
-This plan outlines the steps to resolve the $R^2$ stagnation and interpretability issues (random LIME patterns) in your weight prediction model.
+## 🏗️ PART 1: CREATIONAL PATTERNS
 
----
+### Question 1: Abstract Factory vs. Factory Method
+Your team is building a cross-platform video rendering app. 
+* **Scenario A:** You need a method that initializes a single video exporter (`MP4Exporter` or `WebMExporter`) depending on the user's settings.
+* **Scenario B:** You need to generate an entire matching ecosystem of UI components, background processors, and encoding codecs specifically configured for either *Windows High-Performance Mode* or *Mac Retina Mode*.
+* **Task:** Identify which scenario requires the **Factory Method** and which requires the **Abstract Factory**, and explain the core difference between their intents.
 
-## 1. Structural Changes (The "Spatial" Fix) (Done)
-Currently, your model uses `pooling='avg'`, which flattens all spatial data. The model loses the distinction between a "clover leaf" and "green-colored soil."
+### Question 2: The Builder Dilemma
+You are designing a `NetworkRequest` class that has 2 mandatory fields (`url`, `method`) and 15 optional configurations (e.g., `timeout`, `headers`, `cookies`, `retry_count`, `cache_policy`). 
+* **A.** What programming problem (often seen in constructors with many parameters) does the **Builder Pattern** eliminate here?
+* **B.** How does the Builder pattern maintain **immutability** for the final `NetworkRequest` object during its step-by-step construction?
 
-* **Remove Global Average Pooling:** Change the base model output to keep the 2D feature map.
-* **Implement Spatial Attention:** Add a convolutional block that learns a weight for every pixel/region. This acts as a "soft" density map.
-* **Why:** This forces the model to justify its weight prediction based on specific plant locations rather than an image-wide color average.
-
----
-
-## 2. Refined Loss Strategy (Done)
-Since you are predicting absolute grams (log-transformed), you need a loss that is robust to outliers but precise for small values.
-
-* **Primary Loss:** **Log-Cosh Loss**. 
-    * *Formula:* $L(y, \hat{y}) = \sum \log(\cosh(\hat{y} - y))$
-    * *Rationale:* It provides smoother gradients than MAE and is less sensitive to the "heavy" high-biomass samples that often cause the spikes seen in your current RMSE curves.
-* **Secondary Metric:** Keep monitoring **MAE**, but focus on **R2 Score** across different weight ranges (e.g., how does it perform on <5g vs >20g?).
+### Question 3: Singleton vs. Prototype
+* **A.** In a multithreaded environment, what danger do you face when implementing a **Singleton** Database Manager, and how do you protect against it?
+* **B.** In a game engine, why is cloning an existing instance using the **Prototype Pattern** faster and more memory-efficient than repeatedly calling standard object instantiation (`__init__` or `new`) for 100 separate monster units?
 
 ---
 
-## 3. Augmentation & Noise Tuning (Done)
-Your current noise level is likely destroying the very textures (leaf edges) the model needs.
+## 🧱 PART 2: STRUCTURAL PATTERNS
 
-* **Reduce Gaussian Noise:** Lower the factor from `0.3` to `0.05`. High noise makes the image look like "static," forcing the model to rely on global color rather than leaf shape.
-* **Add CoarseDropout (Cutout):** Instead of pixel noise, drop out square "chunks" of the image. This teaches the model to estimate total weight even when some plants are obscured or partially visible.
-* **Color Constancy:** Keep the Hue/Saturation shifts but narrow the range. Clover and grass have very specific green signatures; shifting them too far might turn them into "dead" material in the model's eyes.
+### Question 4: Decorator vs. Proxy
+Both the **Decorator** and **Proxy** patterns use composition to wrap a target object and share the exact same interface as the object they are wrapping.
+* **A.** If their structures look nearly identical in code, what is the fundamental difference in their **intent**?
+* **B.** If you want to add a feature that intercepts a database call to check if the current user has "Admin" permissions before executing the query, which pattern should you use?
 
----
+### Question 5: Composite Architecture
+You are building an organizational chart application. The system needs to calculate the total salary budget for various departments. A `Department` can contain individual `Employee` objects, but it can also contain *sub-departments*, which themselves contain more employees.
+* **Task:** Explain how the **Composite Pattern** allows a client script to calculate the total budget of a top-level department seamlessly without using `isinstance()` checks or complex nested loops.
 
-## 4. Training Schedule & Regularization
-The gap between your training and validation loss indicates overfitting to the training textures.
-
-* **Learning Rate Warmup:** Use a `CosineDecay` scheduler with a warmup phase. This prevents the model from "shattering" the pre-trained ImageNet weights in the first few epochs.
-* **L2 Regularization (Weight Decay):** Increase the `weight_decay` in your `AdamW` optimizer to penalize overly complex weights.
-* **Unfreeze Layers Gradually:** Instead of unfreezing `N` layers immediately, train the head first, then slowly unfreeze the ConvNeXt blocks from top to bottom.
-
----
-
-## 5. Summary Checklist
-
-| Category | Action | Priority |
-| :--- | :--- | :--- |
-| **Architecture** | Replace `pooling='avg'` with Spatial Attention block | **High** |
-| **Loss Function** | Switch from Composite MAE/RMSE to **Log-Cosh** | **High** |
-| **Augmentation** | Reduce Gaussian Noise to **0.05**; add **CoarseDropout** | **Medium** |
-| **Optimizer** | Implement **Learning Rate Warmup** | **Medium** |
-| **Evaluation** | Use **Saliency Maps** (Grad-CAM) to verify spatial focus | **Low** |
+### Question 6: Adapter vs. Facade vs. Bridge
+* **A.** You have a 3rd-party analytics library that outputs data in XML format, but your main dashboard only accepts JSON. Which pattern closes this gap?
+* **B.** You have a massive, chaotic subsystem consisting of 15 micro-classes (audio mixers, video buffers, thread lockers). You want to give the client a simple `start_stream()` button. Which pattern do you use?
+* **C.** You are designing a system where you have multiple types of `RemoteControl` abstractions and multiple types of `TV/Radio` implementations. You want to grow the remotes and the devices independently without creating a matrix of `SonyRemoteForRadio`, `SamsungRemoteForTV`, etc. How does the **Bridge Pattern** structurally solve this?
 
 ---
 
-## Implementation Template (Attention Head)
+## 🏎️ PART 3: BEHAVIORAL PATTERNS
 
-```python
-# Modified Head for build_model()
-base_model = tf.keras.applications.ConvNeXtTiny(include_top=False, ...)
-spatial_features = base_model.output # Shape: (Batch, H, W, C)
+### Question 7: Strategy vs. State
+Both **Strategy** and **State** change the behavior of a context object dynamically at runtime by swapping out an internal reference to a behavior object.
+* **A.** Who typically controls the swapping of the behavior object in the **Strategy Pattern**?
+* **B.** Who typically handles the transition from one behavior to another in the **State Pattern**, and why?
 
-# Learn where the biomass is
-attention_map = layers.Conv2D(1, (1, 1), activation='sigmoid')(spatial_features)
-weighted_features = layers.Multiply()([spatial_features, attention_map])
+### Question 8: The Command Pattern & Undo Mechanics
+You are building a text editor like Microsoft Word. You implement the **Command Pattern** to execute text operations like `InsertTextCommand` and `DeleteTextCommand`.
+* **Task:** To support an **Undo/Redo stack**, what two essential pieces of information or structural methods must each concrete `Command` object implement?
 
-# Global sum/average of the "attended" features
-x = layers.GlobalAveragePooling2D()(weighted_features)
-x = layers.Dense(128, activation='silu')(x)
-outputs = layers.Dense(3, activation='linear')(x)
+### Question 9: Observer vs. Chain of Responsibility
+* **A.** When a `Publisher` triggers an update in the **Observer Pattern**, which observers receive the broadcast?
+* **B.** When a `SupportTicket` enters a **Chain of Responsibility**, how many handlers along the chain typically execute and resolve the request? What is the structural difference in how messages flow between these two patterns?
+
+### Question 10: Template Method vs. Iterator vs. Memento
+* **A.** How does **Template Method** enforce the Open/Closed Principle (OCP) when defining a broad data-parsing algorithm?
+* **B.** How does the **Iterator Pattern** respect Encapsulation when navigating a complex tree data structure?
+* **C.** Why does a **Memento** object intentionally hide its internal state snapshot from the outside `Caretaker` class that manages the save history?
+
+### Question 11: Visitor vs. Interpreter
+* **A.** You have a complex syntax tree representing a custom formula layout (e.g., `"5 PLUS 3"`). Which pattern evaluates this syntax tree into a numerical result?
+* **B.** You have a fixed system of geometric elements (`Circle`, `Square`). You want to add a brand-new operational feature (e.g., `export_to_svg()`, `calculate_perimeter()`) without changing any code inside the `Circle` or `Square` classes. How does the **Visitor Pattern** make this possible?

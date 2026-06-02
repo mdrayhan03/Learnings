@@ -1,0 +1,31 @@
+Q1
+for Scenario A we need Factory Method and Scenario B we need Abstract Factory.
+Factory Method is like subclass of interface so that all subclass can use under a same function or usecase with different workflow, like Scenario A our main task is a single video exporter depending on user's settings so we need a common function that exporter video using MP4 or Web both way, Factory Method something similar like strategy method also
+Abstract Factory more like Factory Method but it works for families of object not a single object like Factory Method, like in Scenario B we need a entire ecosystem of UI components, background processors, encoding codecs all are like one family like for windows os we need different UI, background processors etc and for mac os we need different but the are connected in a ecosystem.
+
+Q2
+A: if a object constructs with many fields which are optional it becomes a problematic, because some parameters we don't need but for construction we need to pass them like None and we have to remember the parameters serial is serial mis our code can break or can be logical error and Builder Pattern solves this problem. In Builder Pattern we use method chaining to construct object so we don't need the serial or parameters and we can only call which parameters do we need and no need to call optional unnecessary parameters method.
+B: In Builder Pattern first we make all the object fields with None or necessary default parameters for optional fields, then in we build parameter by parameter like lego pieces joining one by one and at the last becomes the complete picture same for this pattern we build one by one parameters method if need else we use that default value parameter and at the last we use build function to make the entire object and return.
+
+Q3
+A: in a multithreaded environment if we use singleton it's not use as singleton because every thread use their own object we can think it like that one thread use one object for it's entire work but if 5 thread we create 5 object, to solve this we have to use thread locking so that at a same time two thread cannot create object and if object is created always use the created object don't create new and for multiprocess environment singleton is quite impossible.
+B: in a game engine a monster object can be heavy loading object like loading animation and assets can take 5-10s, every time new monster instantiation take the same 5-10s if we use prototype pattern using deepcopy, it's not like normal copy, in a normal copy it's only copy the first layer and if the main object change the copy object also change, in deepcopy it's copy the entire object from first to end all layer so it's becomes seperated then main object and work as entirely individual and from prototyping we don't need 5-10s time (it depends on scenario) because all static heavy loaded work done in main object and we use those in the prototyped object.
+
+Q4
+
+
+Q5
+in a composite pattern we use the component, leaf, composition method, here we have a component(interface) which have abstractmethod like get_budget and this is useful for both employee(leaf) and department(composition), so now both employee and department has get_budget function so in a loop if we call get_budget function it's not going to break the code and logical error, so in a department can have employees and departments also so if we use composite pattern we don't need to check is the instance employee or department we only can call the function and our function logic will handle that.
+
+Q6
+A: we have to use Adapter pattern here to adapt xml to json
+B: we can use facad pattern here because we have many object to instantiation to start the stream but our client always not going to instanciate all object so we use a function or helper class which instanciate all object for our client via one function call
+C: for this scenario using Bridge Pattern we can create interfaces like remote and device where we will have SonyRemote, SamsungRemote etc and we will have device remote like TVRemote and RadioRemote and we can pass company remote as a parameter to the device remote so if new company comes we don't need to create that company tv/radio remote we only create company remote and pass to tv or radio and it will handle that.
+
+Q7
+
+
+Q8
+
+
+Q9

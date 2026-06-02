@@ -13,11 +13,15 @@
 | | **Composite** | File System Directory | Treat individual Files and Folders (which contain files) as the same type so you can "Calculate Size" on both. | ✅ **Done** |
 | | **Decorator** | Text Formatter | Take a "Plain Text" object and dynamically wrap it with `BoldDecorator`, `ItalicDecorator`, or `UnderlineDecorator`. | ✅ **Done** |
 | | **Facade** | Home Theater "One-Button" Start | Create one class that handles the complex sequence of turning on the TV, Soundbar, and DVD Player at once. | ✅ **Done** |
-| | **Proxy** | Image Gallery Caching | Create a placeholder object that only loads a heavy high-res image from "disk" when it's actually scrolled into view. | ⏳ To Do |
+| | **Proxy** | Image Gallery Caching | Create a placeholder object that only loads a heavy high-res image from "disk" when it's actually scrolled into view. | ✅ **Done** |
 | --- | --- | --- | --- | --- |
-| **Behavioral** | **Strategy** | E-commerce Checkout | Switch between different payment methods (PayPal, Credit Card, Crypto) at runtime using the same `pay()` method. | ⏳ To Do |
-| *(Focus on communication)*| **Observer** | YouTube/Newsletter Subscription | Create a "Subject" (Creator) that automatically notifies all "Observers" (Subscribers) when a new video is posted. | ⏳ To Do |
-| | **Command** | Smart Home Undo/Redo | Represent "Turn on Light" as an object so you can store it in a list and "Undo" the last 5 actions. | ⏳ To Do |
-| | **State** | Vending Machine Logic | Change how the machine reacts to "Press Button" based on whether it is in the `NoCoin`, `HasCoin`, or `OutOfStock` state. | ⏳ To Do |
-| | **Template Method** | Data Miner / Parser | Define a standard skeleton for "Read Data -> Process -> Save," but let subclasses decide how to read from CSV vs. PDF. | ⏳ To Do |
-| | **Iterator** | Social Media Feed | Create a custom way to loop through a collection of "Posts" (e.g., skip ads, only show friends) without exposing the list. | ⏳ To Do |
+| **Behavioral** | **Strategy** | E-commerce Checkout | Switch between different payment methods (PayPal, Credit Card, Crypto) at runtime using the same `pay()` method. | ✅ **Done** |
+| *(Focus on communication)*| **Observer** | YouTube/Newsletter Subscription | Create a "Subject" (Creator) that automatically notifies all "Observers" (Subscribers) when a new video is posted. | ✅ **Done** |
+| | **Command** | Smart Home Undo/Redo | Represent "Turn on Light" as an object so you can store it in a list and "Undo" the last 5 actions. | ✅ **Done** |
+| | **State** | Vending Machine Logic | Change how the machine reacts to "Press Button" based on whether it is in the `NoCoin`, `HasCoin`, or `OutOfStock` state. | ✅ **Done** |
+| | **Template Method** | Data Miner / Parser | Define a standard skeleton for "Read Data -> Process -> Save," but let subclasses decide how to read from CSV vs. PDF. | ✅ **Done** |
+| | **Iterator** | Social Media Feed | Create a custom way to loop through a collection of "Posts" (e.g., skip ads, only show friends) without exposing the list. | ✅ **Done** |
+| | **Memento** | Video Game "Save Point" | Capture a `PlayerState` (HP, Level) and store it so you can "Undo" a character's death without breaking encapsulation. | ✅ **Done** |
+| | **Chain of Responsibility** | Support Ticket System | Pass a request through a chain: `Level1Tech` -> `Manager` -> `CEO`. Each handler decides to solve it or pass it on. | ✅ **Done** |
+| | **Visitor** | Insurance Risk Calculator | Add new operations (like `calculate_tax`) to a group of objects (Building, Car) without changing their classes. | ✅ **Done** |
+| | **Interpreter** | Custom Math Parser | Define a grammar for a simple language (e.g., "5 PLUS 2") and evaluate it using a tree of expressions. | ✅ **Done** |

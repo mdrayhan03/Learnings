@@ -1,0 +1,41 @@
+Q1
+
+A: if I relay on a strict, single-inheritance class then if any existing feature of parent class need to be updated in child class can face then we have to modify the existing implemented feature
+
+B: by using composition we give reference of a class so that if we need any new feature on that existing feature our main code will not break
+
+
+
+Q2
+
+A: it violating the LoD by doing high coupling like the order class have to depend(so that code not break) to the last validate function which maybe not this order class function so dependency become more
+
+B: I will use invocation so that one class has only dependency on it's next class and those all have no connection so I don't need any interface
+
+
+
+Q3
+
+here violate the YAGNI because my developer thinking the unpredictable future  so we don't need that feature now, we can use kiss here to make it as simple as we can like just a normal csv read library
+
+
+
+Q4
+
+A: in python there in no public, private type so that we can make it more secure and some variable must be private or public according to their need like here password must me private and should not be accessable easily by others so here we need encapsulation to make it more secure
+
+B: for python getter we can use @property and for setter @variable.setter
+
+
+
+Q5
+
+def process_payment(user, amount):
+    if user is None:
+         return False
+    if amount <= 0:
+        return False
+    if not user.has_active_card():
+        return False
+    # core logic
+    return True
