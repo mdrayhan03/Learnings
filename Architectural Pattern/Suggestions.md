@@ -1,0 +1,12 @@
+# Architectural Patterns & Prerequisites Master Tracker
+
+| Topic / Pattern | Practice Mini-Project Idea | The "Hands-on" Challenge | Status |
+| :--- | :--- | :--- | :--- |
+| **[Prereq] The Client-Server Model** | Raw HTTP Request Handler | Build a minimal script that manually parses a raw HTTP request string and returns a properly formatted HTTP response body and status code without using a web framework. | ✅ **Done** |
+| **[Prereq] Coupling & Dependency Injection** | Swappable Notification Service | Build a service that sends alerts. Use dependency injection so you can switch the delivery mechanism from `EmailService` to `SmsService` by changing just one line of configuration. | ✅ **Done** |
+| **Layered (N-Tier) Architecture** | E-Commerce Product Catalog | Structure a small backend app into strict Controller, Business Logic (Service), and Data Access (Repository) layers. The Controller must never see a database query. | ✅ **Done** |
+| **Hexagonal (Ports & Adapters)** | Weather Dashboard / CLI | Create a core application that fetches weather data. Define an interface (Port). Write one Adapter for a real live Weather API and another Adapter that just reads from a local JSON file for testing. | 🔲 **Todo** |
+| **Clean / Onion Architecture** | Banking Transaction Core | Place your core business rules (e.g., `Account`, `TransferMoneyUseCase`) at the absolute center. Keep your database engine and web framework on the outermost circle. Dependencies must point strictly inward. | 🔲 **Todo** |
+| **CQRS (Command Query Segregation)** | High-Traffic Article Portal | Separate your data paths. Create a `WriteService` that handles creating and editing articles (Commands), and an entirely independent, optimized `ReadService` that only handles fetching and displaying articles (Queries). | 🔲 **Todo** |
+| **Microservices Architecture** | Ride-Booking System Breakdown | Take a simple application and break it into two independent, mini-apps (e.g., a `UserManagementService` and a `BookingService`) that run on different ports and talk to each other via REST or gRPC. | 🔲 **Todo** |
+| **Event-Driven Architecture (EDA)** | Order Processing Pipeline | Set up a local message broker (like RabbitMQ or Kafka). When an order is placed, publish an `OrderPlaced` event. Have a separate Inventory service and Email service listen for that event and react asynchronously. | 🔲 **Todo** |
