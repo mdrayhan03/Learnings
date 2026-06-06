@@ -455,3 +455,93 @@ http {
     }
 }
 ```
+
+## HAProxy
+While NGINX is an incredible all-in-one web server, reverse proxy, and cache, HAProxy is a dedicated, laser-focused Layer 4 (TCP) and Layer 7 (HTTP) load balancer. It doesn’t serve static HTML files from a disk, and it doesn't handle web caching. It does one thing exceptionally well: routes massive volumes of network traffic with ultra-low latency and advanced queuing.
+
+Let's break down HAProxy into digestible parts, look at its core architecture, examine its configuration file structure, and look at how to get the stats dashboard up and running.
+
+### Why HAProxy over NGINX?
+If NGINX can load balance, why do engineering teams drop HAProxy in front of it?
+
+- **True Layer 4 Performance:** While NGINX supports stream routing, HAProxy was built from the ground up for raw TCP proxying. It can load balance databases (like a MySQL or PostgreSQL cluster), MQTT streams, or raw TCP sockets with negligible CPU overhead.
+
+- **Advanced Routing & Algorithms:** HAProxy can inspect deep into HTTP requests, handle sophisticated stickiness rules, and queue requests natively at the load balancer layer before hitting backend app servers.
+
+- **The Stats Dashboard:** Out of the box, HAProxy provides an incredibly detailed, real-time visual matrix of your cluster's health, active connections, and error rates. NGINX requires paid NGINX Plus or third-party modules for a comparable visual dashboard.
+
+### Configuration File Architecture
+An HAProxy configuration file (typically /etc/haproxy/haproxy.cfg) is split into four distinct, logical blocks. Understanding these blocks is the key to mastering HAProxy.
+
+1. **global**<br>
+    Configures process-wide settings. This is where you tune low-level performance, security privileges, and where logs are sent.
+
+    **Example parameters:** maxconn (system-wide connection limits), user/group (dropping root privileges for security).
+
+2. **defaults**<br>
+    Saves you from repeating yourself. Any settings written here (like timeouts or balance algorithms) are automatically inherited by your traffic blocks unless explicitly overridden.
+
+3. **frontend**<br>
+    Defines how HAProxy listens for incoming traffic. This handles IP addresses, ports, SSL certificates, and sets up traffic rules (ACLs) to decide which backend should handle the request.
+
+4. **backend**<br>
+    Defines where to send the traffic. This contains the pool of actual application servers, the load-balancing algorithm to use, and how to perform health checks.
+
+### Writing Your First haproxy.cfg
+Here is a clean, production-ready starter configuration mapping a public-facing port 80 frontend to a backend pool of three application containers using a Round Robin algorithm with active health checks.
+```nginx
+global
+    log /dev/log local0
+    log /dev/log local1 notice
+    maxconn 4096
+    user haproxy
+    group haproxy
+
+defaults
+    log     global
+    mode    http        # Operating at Layer 7 (HTTP mode)
+    option  httplog     # Enable rich HTTP logging
+    option  dontlognull
+    retries 3
+    timeout connect 5000ms
+    timeout client  50000ms
+    timeout server  50000ms
+
+# --- The Front Door ---
+frontend my_http_front
+    bind *:80
+    # Capture the client's real IP and pass it down the line
+    option forwardfor 
+    # Route all traffic hitting this frontend to our backend pool
+    default_backend my_app_backend
+
+# --- The Back Pool ---
+backend my_app_backend
+    balance roundrobin   # The algorithm
+    option httpchk GET /health
+    
+    # Define the backend nodes
+    # check: enables active health checks
+    # inter 2s: check every 2 seconds
+    # rise 2: mark healthy after 2 consecutive successful checks
+    # fall 3: evict from pool after 3 consecutive failed checks
+    server app_node_1 172.17.0.2:8080 check inter 2s rise 2 fall 3
+    server app_node_2 172.17.0.3:8080 check inter 2s rise 2 fall 3
+    server app_node_3 172.17.0.4:8080 check inter 2s rise 2 fall 3
+```
+### Activating the HAProxy Stats Dashboard
+One of HAProxy's best built-in features is its monitoring UI. It gives you a real-time table indicating if backend nodes are up, down, or actively throwing errors.
+
+To enable it, you simply define a dedicated frontend or a standalone listen block in your configuration file:
+
+```nginx
+listen haproxy_stats
+    bind *:9000            # Listen on port 9000 for monitoring
+    mode http
+    stats enable
+    stats uri /            # Access the dashboard directly at http://<IP>:9000/
+    stats refresh 5s       # Automatically refresh the page every 5 seconds
+    stats auth admin:secretpassword123  # Basic Authentication protection
+```
+
+When you open this page in your browser, healthy servers show up in green, while down or degraded servers immediately transition to red, allowing you to visually witness your health check parameters (rise/fall) in action.

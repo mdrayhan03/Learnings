@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  # 1. The Dedicated Load Balancer (Replacing NGINX)
+  haproxy-lb:
+    image: haproxy:2.8-alpine
+    ports:
+      - "80:80"       # Exposed to your laptop for Flask traffic
+      - "9000:9000"   # Exposed to your laptop for the Stats Dashboard
+    volumes:
+      - ./haproxy/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+    depends_on:
+      - flask_app_1
+      - flask_app_2
+      - flask_app_3
+
+  # 2. The Internal Hidden Flask App
+  # mem_limit caps RSS. /crash leaks ~30MB/req, so each container dies
+  # after roughly 5-6 hits. restart: on-failure brings it back so you
+  # can watch nginx route around the dead upstream, then re-balance.
+  flask_app_1:
+    build: ./flask_app_1
+    mem_limit: 200m
+    memswap_limit: 200m   # disable swap so OOMKill happens immediately
+    cpus: 0.5             # cap CPU so the burn loop saturates fast
+    restart: on-failure
+
+  flask_app_2:
+    build: ./flask_app_2
+    mem_limit: 200m
+    memswap_limit: 200m
+    cpus: 0.5
+    restart: on-failure
+
+  flask_app_3:
+    build: ./flask_app_3
+    mem_limit: 200m
+    memswap_limit: 200m
+    cpus: 0.5
+    restart: on-failure
