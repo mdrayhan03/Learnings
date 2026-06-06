@@ -12,7 +12,8 @@ A: in a multithreaded environment if we use singleton it's not use as singleton 
 B: in a game engine a monster object can be heavy loading object like loading animation and assets can take 5-10s, every time new monster instantiation take the same 5-10s if we use prototype pattern using deepcopy, it's not like normal copy, in a normal copy it's only copy the first layer and if the main object change the copy object also change, in deepcopy it's copy the entire object from first to end all layer so it's becomes seperated then main object and work as entirely individual and from prototyping we don't need 5-10s time (it depends on scenario) because all static heavy loaded work done in main object and we use those in the prototyped object.
 
 Q4
-
+A: both Decorator and Proxy look identically same in code but they are different in decorator we update our make class or data with decorator like in text we add underline or bold and in Proxy we send another class same as main class but lightweight to handle the initial task and when we need the main class we import the main class and these are the difference in their intent.
+B: For this task we need to use Decorator pattern it's like before our database call first check is admin or not.
 
 Q5
 in a composite pattern we use the component, leaf, composition method, here we have a component(interface) which have abstractmethod like get_budget and this is useful for both employee(leaf) and department(composition), so now both employee and department has get_budget function so in a loop if we call get_budget function it's not going to break the code and logical error, so in a department can have employees and departments also so if we use composite pattern we don't need to check is the instance employee or department we only can call the function and our function logic will handle that.
@@ -23,9 +24,21 @@ B: we can use facad pattern here because we have many object to instantiation to
 C: for this scenario using Bridge Pattern we can create interfaces like remote and device where we will have SonyRemote, SamsungRemote etc and we will have device remote like TVRemote and RadioRemote and we can pass company remote as a parameter to the device remote so if new company comes we don't need to create that company tv/radio remote we only create company remote and pass to tv or radio and it will handle that.
 
 Q7
-
+A: the main object's that function which use the strategy first change the strategy, or we can say we pass our necessary strategy in that function.
+B: State's ownself changes their state in their state changeable function, like inactive state we press button its become active and this change happened in the inactive state press button function, why state change the state so that we don't need to handle it in outside and it's very difficult to track.
 
 Q8
-
+to do undo/redo we need to add memento pattern, we need two memento one for undo and one for redo.
 
 Q9
+A: when a Publisher triggers an update in the observer pattern, those observer who are in the Publisher observer list receive the broadcast.
+B: when a SupportTicket enters a Chain of Responsibility it handles as many situation or handler class we have to execute and resolve the request.In observer pattern messages flow like broadcast and every observer will get the message and in the CoR pattern message flow one by one handler like if this is the right handler then handle and break the chain else pass to the next handler, so in the worst case scenario all handler can get the message else the flow can break in middle of the chain.
+
+Q10
+A: template method is if two or more workflow has some same task we make them one function and which are not same task those we implement for different workflow, it follows ocp(open close principle) because our workflow are allowed for extend like if need we can add new function but we don't modify existing function or workflow. for a data parsing algorithm we have a sequence of workflow like get data -> upload data -> parse data -> store data, in this workflow get data, upload data are same for all data type but parse data can be different like is data seperated line by line or comma by comma or tab by tab and these functions are close because we can't modify them if we need another function like add decorator in data like bold underline we can add a new function named data decorator before store data.
+B: in iterator pattern we use .next for the next object and it hides the interchange from one to another we only see next, for bst we can have .left and .right and if we use it, it expose our internal structure so .next hide those structure.
+C: memento object intentionally hide it's internal state snapshot from the outside Caretaker class to respect the encapsulation, our caretaker class don't need the internal encapsuled data rather than only the memento object that's why.
+
+Q11
+A: Interpreter pattern evaluates this syntax tree into a numerical result.
+B: Visitor pattern is like instance visites to the function and done it's work. Like Circle/Square class is created now we need two function export to svg and calculate perimeter and this function is necessary for both so we can implement them in both Circle and Square class but if new class Triangle then we need to implement these two function again so we can follow visitor pattern where two class like export svg and calculate perimeter will have the functions and Circle, Square, Triangle class will visite as a instance and do their work, this way we don't need to code in Circle, Square and Triangle class.
