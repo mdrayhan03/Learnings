@@ -1,0 +1,325 @@
+Q1
+from abc import ABC, abstractmethod
+from typing import List
+
+class NoNotifierError(Exception): pass
+
+# Strategy Interface
+class INotifier(ABC):
+    @abstractmethod
+    def send(self, message: str) -> str: 
+        pass
+
+# Concrete Strategies (Leafs)
+class Email(INotifier):
+    def send(self, message: str) -> str:
+        return f"[EMAIL] {message}"
+
+class SMS(INotifier):
+    def send(self, message: str) -> str:
+        return f"[SMS] {message}"
+    
+class SlackPush(INotifier):
+    def send(self, message: str) -> str:
+        return f"[SLACK PUSH] {message}"
+
+# Composite Pattern Implementation
+class NotifierComposition(INotifier):
+    def __init__(self):
+        self.notifiers: List[INotifier] = []
+
+    def subscribe(self, notifier: INotifier):
+        self.notifiers.append(notifier)
+    
+    def remove(self, notifier: INotifier):
+        self.notifiers.remove(notifier)  # Fixed typo
+
+    def send(self, message: str) -> str:
+        if not self.notifiers:
+            raise NoNotifierError("User has no notifier!")
+        
+        results = [notifier.send(message) for notifier in self.notifiers]
+        return "\n".join(results)
+
+# Decorator Pattern Implementation
+class NotifierDecorator(INotifier, ABC):
+    def __init__(self, notifier: INotifier):
+        self.wrapped = notifier
+    
+    def send(self, message: str) -> str:
+        return self.wrapped.send(message)
+
+class SMSDecorator(NotifierDecorator):
+    def send(self, message: str) -> str:
+        base_result = super().send(message)
+        return f"{base_result}\n[SMS] {message}"  # Fixed \n escape
+
+class SlackPushDecorator(NotifierDecorator):
+    def send(self, message: str) -> str:
+        base_result = super().send(message)
+        return f"{base_result}\n[SLACK PUSH] {message}"  # Fixed \n escape
+
+# Context / Core Logic
+class User:
+    def __init__(self, notifier: INotifier):
+        self.notifier = notifier
+
+    def publish(self, message: str):
+        # Now handles return strings consistently
+        print(self.notifier.send(message))
+
+
+# === Execution ===
+
+print("--- Strategy + Composite Execution ---")
+composite = NotifierComposition()
+composite.subscribe(Email())
+composite.subscribe(SlackPush())
+
+user1 = User(composite)
+user1.publish("Message Sent!")
+
+print("\n--- Strategy + Decorator Execution ---")
+decorator_chain = SlackPushDecorator(Email())
+user2 = User(decorator_chain)
+user2.publish("Message Sent!")
+-----------------------------------------------------------------------------------
+
+Q2
+from abc import ABC, abstractmethod
+
+# adapter
+class JsonConf :
+    def get_json(self) :
+        return '{"id": "1", "name": "ABC"}'
+
+class XmlConf :
+    def get_xml(self) :
+        return '<data><id>1</id><name>ABC</name></data>'
+
+class Adapter(ABC) :
+    @abstractmethod
+    def get_dict(self): pass
+
+
+class JsonAdapter(Adapter) :
+    def __init__(self, json_conf: JsonConf):
+        self.json_conf = json_conf
+    
+    def get_dict(self) :
+        data = self.json_conf.get_json()
+
+        # json to dict conversion
+        data = {"id": 1, "name": "ABC"}
+        return data
+
+class XmlAdapter(Adapter) :
+    def __init__(self, xml_conf: XmlConf):
+        self.xml_conf = xml_conf
+    
+    def get_dict(self) :
+        data = self.xml_conf.get_xml()
+
+        # xml to dict conversion
+        data = {"id": 1, "name": "ABC"}
+        return data
+
+# factory
+class ConfigurationFactory :
+    @staticmethod
+    def create_conf_adapter(format_type: str) -> Adapter :
+        format_type = format_type.lower()
+
+        if format_type == "json" :
+            return JsonAdapter(JsonConf())
+        elif format_type == "xml" :
+            return XmlAdapter(XmlConf())
+        else :
+            raise ValueError("Undefined format!")
+
+class Application :
+    def __init__(self, adapter: Adapter):
+        self.adapter = adapter
+
+    def get_conf(self) :
+        conf_dict = self.adapter.get_dict()
+        print(f"Format type: {type(conf_dict)}\nConfiguration: {conf_dict}")
+
+# execution
+app1 = Application(ConfigurationFactory.create_conf_adapter("json"))
+app1.get_conf()
+
+app2 = Application(ConfigurationFactory.create_conf_adapter("xml"))
+app2.get_conf()
+------------------------------------------------------------------------------------
+
+Q3
+from abc import ABC, abstractmethod
+import threading
+import time
+
+class VendingMachine:
+    def __init__(self):
+        # 1. Fixed unique state names to prevent variable/method collision
+        self.idle_state = IdleState(self)
+        self.has_money_state = HasMoneyState(self)
+        self.dispensing_state = DispensingState(self)
+        self.stock_out_state = OutOfStockState(self)
+
+        self._state = self.idle_state
+        self._lock = threading.RLock() # Thread-safe Reentrant Lock
+        
+        self.inventory = {
+            1: {"name": "soda", "stock": 1}
+        }
+        self.selected_product = None
+
+    def set_state(self, state):
+        self._state = state
+
+    # --- Securely Guarded Context Actions ---
+    def insert_money(self, amount):
+        with self._lock:
+            self._state.insert_money(amount)
+    
+    def select_product(self, product_id):
+        with self._lock:
+            self._state.select_product(product_id)
+    
+    def dispense(self):
+        with self._lock:
+            self._state.dispense()
+    
+    def cancel_transaction(self):
+        with self._lock:
+            self._state.cancel_transaction()
+
+    # --- Context Helper Methods ---
+    def select_product_by_id(self, product_id):
+        return self.inventory.get(product_id)
+
+# ==========================================
+# STATE IMPLEMENTATIONS
+# ==========================================
+class State(ABC):
+    @abstractmethod
+    def insert_money(self, amount): pass
+    
+    @abstractmethod
+    def select_product(self, product_id): pass
+    
+    @abstractmethod
+    def dispense(self): pass
+    
+    @abstractmethod
+    def cancel_transaction(self): pass
+
+class IdleState(State): 
+    def __init__(self, machine: VendingMachine):
+        self._machine = machine
+
+    def insert_money(self, amount): 
+        print(f"[IDLE] Money Inserted: ${amount}")
+        self._machine.set_state(self._machine.has_money_state)
+    
+    def select_product(self, product_id): 
+        print("[IDLE] Error: Insert money before making a selection.")
+    
+    def dispense(self): 
+        print("[IDLE] Error: No payment detected.")
+    
+    def cancel_transaction(self): 
+        print("[IDLE] Error: No active transaction to cancel.")
+
+class HasMoneyState(State): 
+    def __init__(self, machine: VendingMachine):
+        self._machine = machine
+        
+    def insert_money(self, amount): 
+        print("[HAS_MONEY] Additional money accepted.")
+    
+    def select_product(self, product_id): 
+        product = self._machine.select_product_by_id(product_id)
+        if not product or product.get("stock") == 0:
+            print(f"[HAS_MONEY] Error: Out of stock!")
+            self._machine.set_state(self._machine.stock_out_state)
+        else:
+            print(f"[HAS_MONEY] Selected {product.get('name')}. Initializing dispatch sequence...")
+            self._machine.selected_product = product
+            self._machine.set_state(self._machine.dispensing_state)
+    
+    def dispense(self): 
+        print("[HAS_MONEY] Select a product first.")
+    
+    def cancel_transaction(self): 
+        print("[HAS_MONEY] Transaction canceled. Refunding money.")
+        self._machine.set_state(self._machine.idle_state)
+
+class DispensingState(State): 
+    def __init__(self, machine: VendingMachine):
+        self._machine = machine
+        
+    def insert_money(self, amount): 
+        print("[DISPENSING] Rejected: Dispense cycle in progress. Please wait.")
+    
+    def select_product(self, product_id): 
+        print("[DISPENSING] Error: Dispense cycle in progress.")
+    
+    def dispense(self): 
+        product = self._machine.selected_product
+        
+        # Artificial delay to prove our thread-lock blocks simultaneous race conditions
+        time.sleep(0.5) 
+        
+        if product.get("stock") <= 0:
+            print(f"[DISPENSING] Race failure: Item emptied mid-air!")
+            self._machine.set_state(self._machine.stock_out_state)
+        else:
+            product["stock"] -= 1
+            print(f"[DISPENSING] Released: {product.get('name')} successfully issued. Remaining stock: {product['stock']}")
+            self._machine.selected_product = None
+            self._machine.set_state(self._machine.idle_state)
+    
+    def cancel_transaction(self): 
+        print("[DISPENSING] Error: Cannot cancel once dispensing begins.")
+
+class OutOfStockState(State): 
+    def __init__(self, machine: VendingMachine):
+        self._machine = machine
+        
+    def insert_money(self, amount): 
+        print("[OUT_OF_STOCK] Money inserted! Testing system availability...")
+        # 1. Take the money and transition to HasMoneyState to give it a chance
+        self._machine.set_state(self._machine.has_money_state)
+    
+    def select_product(self, product_id): 
+        print("[OUT_OF_STOCK] Error: Cannot select product. Insert money first.")
+    
+    def dispense(self): 
+        print("[OUT_OF_STOCK] Error: No transaction active.")
+    
+    def cancel_transaction(self): 
+        print("[OUT_OF_STOCK] Refunding core deposit.")
+        self._machine.set_state(self._machine.idle_state)
+
+
+# ==========================================
+# CONCURRENT THREAD TESTING ENVIRONMENT
+# ==========================================
+if __name__ == "__main__":
+    vm = VendingMachine()
+
+    # Step 1: User puts money in and selects product
+    vm.insert_money(5)
+    vm.select_product(1) # Sets state to DispensingState, Soda stock is 1
+
+    # Simulate two hardware/user threads triggering dispense simultaneously
+    thread1 = threading.Thread(target=vm.dispense)
+    thread2 = threading.Thread(target=vm.dispense)
+
+    print("--- Executing Concurrent Threads ---")
+    thread1.start()
+    thread2.start()
+
+    thread1.join()
+    thread2.join()
