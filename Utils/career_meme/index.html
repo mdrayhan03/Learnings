@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Comeback — career meme</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Playfair+Display:ital,wght@1,800;1,900&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    /* ---- tweak the timeline here (all values in milliseconds) ---- */
+    --intro-fade: 800;     /* "Comeback" fade-in */
+    --years-start: 1100;   /* when 2022 begins */
+    --year-in: 320;        /* slide+fade in */
+    --year-hold: 700;      /* centered hold (you asked for 0.7s) */
+    --year-out: 320;       /* slide+fade out */
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html, body {
+    width: 100%; height: 100%;
+    background: #000;
+    overflow: hidden;
+    font-family: 'Oswald', system-ui, sans-serif;
+  }
+
+  /* The full-frame stage. Default 9:16 (reels/shorts). It auto-fits the window. */
+  #stage {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #000;
+  }
+
+  /* The warm vintage "paper" that everything sits on */
+  #paper {
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(120% 120% at 50% 45%, #fbf6ec 0%, #f3e9d6 55%, #e7d7bb 100%);
+    filter: sepia(0.32) saturate(1.05) contrast(1.02) brightness(1.02);
+    will-change: opacity;
+  }
+
+  /* Vignette + warm edge darkening for cinematic depth */
+  #vignette {
+    position: absolute; inset: 0; pointer-events: none;
+    background:
+      radial-gradient(110% 110% at 50% 50%, rgba(0,0,0,0) 55%, rgba(40,24,8,0.55) 100%);
+    mix-blend-mode: multiply;
+  }
+
+  /* Film grain — driven by JS seek so it flickers even in frame-capture mode */
+  #grain {
+    position: absolute; inset: -50%;
+    width: 200%; height: 200%;
+    pointer-events: none;
+    opacity: 0.10;
+    mix-blend-mode: multiply;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+  }
+
+  /* whole-frame exposure flicker (the classic projector "breathing") */
+  #flicker {
+    position: absolute; inset: 0; pointer-events: none;
+    z-index: 4;
+    background: #000;
+    opacity: 0;
+    mix-blend-mode: multiply;
+  }
+  /* warm light-leak that pulses at the edges */
+  #leak {
+    position: absolute; inset: 0; pointer-events: none;
+    z-index: 4;
+    background: radial-gradient(60% 80% at 85% 15%, rgba(255,196,120,0.55), rgba(255,196,120,0) 60%);
+    mix-blend-mode: screen;
+    opacity: 0;
+  }
+  /* vertical scratch lines that jump around like worn celluloid */
+  #scratches {
+    position: absolute; inset: 0; pointer-events: none;
+    z-index: 4;
+    overflow: hidden;
+    mix-blend-mode: overlay;
+  }
+  #scratches i {
+    position: absolute; top: -10%; height: 120%;
+    width: 1px;
+    background: linear-gradient(rgba(255,255,255,0.0), rgba(255,255,255,0.55), rgba(0,0,0,0.25), rgba(255,255,255,0.0));
+    opacity: 0;
+  }
+  /* dust / hair specks */
+  #dust {
+    position: absolute; inset: 0; pointer-events: none;
+    z-index: 4;
+    mix-blend-mode: multiply;
+  }
+  #dust b {
+    position: absolute;
+    background: rgba(40,26,10,0.7);
+    border-radius: 50%;
+    opacity: 0;
+  }
+
+  .center-col {
+    position: relative;
+    z-index: 3;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4.5vmin;
+  }
+
+  #comeback {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-style: italic;
+    font-weight: 900;
+    font-size: 11vmin;
+    letter-spacing: 0.01em;
+    color: #2a1c0c;
+    text-shadow: 0 1px 0 rgba(255,255,255,0.4), 0 3px 14px rgba(60,36,10,0.25);
+    will-change: opacity, transform;
+  }
+
+  /* Loading spinner */
+  #spinner {
+    width: 14vmin; height: 14vmin;
+    border-radius: 50%;
+    border: 1.4vmin solid rgba(70,46,16,0.18);
+    border-top-color: #5a3a12;
+    will-change: transform, opacity;
+  }
+
+  /* Year wrapper sits under the spinner; year text slides within it */
+  #year-track {
+    position: relative;
+    height: 16vmin;
+    width: 80vmin;
+    max-width: 90vw;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+  #year {
+    position: absolute;
+    font-family: 'Oswald', sans-serif;
+    font-weight: 600;
+    font-size: 16vmin;
+    letter-spacing: 0.06em;
+    color: #3a2510;
+    will-change: transform, opacity;
+  }
+
+  /* ---- End card (404) lives on the black screen ---- */
+  #endcard {
+    position: absolute;
+    inset: 0;
+    z-index: 5;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2vmin;
+    background: #000;
+    opacity: 0;
+    will-change: opacity;
+  }
+  #err-code {
+    font-family: 'Oswald', sans-serif;
+    font-weight: 700;
+    font-size: 26vmin;
+    line-height: 1;
+    color: #e23b3b;
+    text-shadow: 0 0 8vmin rgba(226,59,59,0.35);
+    will-change: transform, opacity;
+  }
+  #err-text {
+    font-family: 'Oswald', sans-serif;
+    font-weight: 500;
+    font-size: 8vmin;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: #e23b3b;
+    will-change: transform, opacity;
+  }
+</style>
+</head>
+<body>
+  <div id="stage">
+    <div id="paper"></div>
+    <div id="vignette"></div>
+
+    <div class="center-col" id="white-content">
+      <div id="comeback">Comeback</div>
+      <div id="spinner"></div>
+      <div id="year-track"><div id="year">2022</div></div>
+    </div>
+
+    <div id="grain"></div>
+    <div id="leak"></div>
+    <div id="scratches"><i></i><i></i><i></i></div>
+    <div id="dust"><b></b><b></b><b></b><b></b><b></b></div>
+    <div id="flicker"></div>
+
+    <div id="endcard">
+      <div id="err-code">404</div>
+      <div id="err-text">Not Found</div>
+    </div>
+  </div>
+
+<script>
+/* =========================================================================
+   Deterministic timeline.  Everything is a pure function of `t` (ms) so the
+   exact same frames render whether we play in real time OR seek frame-by-frame
+   for the MP4 export.  Edit the constants below to retime the meme.
+   ========================================================================= */
+
+const YEARS = [2022, 2023, 2024, 2025, 2026];
+
+// read timing from CSS vars so they live in one place
+const cs = getComputedStyle(document.documentElement);
+const ms = (name) => parseFloat(cs.getPropertyValue(name));
+
+const INTRO_FADE  = ms('--intro-fade');
+const YEARS_START = ms('--years-start');
+const YEAR_IN     = ms('--year-in');
+const YEAR_HOLD   = ms('--year-hold');
+const YEAR_OUT    = ms('--year-out');
+const YEAR_CYCLE  = YEAR_IN + YEAR_HOLD + YEAR_OUT;
+
+const YEARS_END   = YEARS_START + YEARS.length * YEAR_CYCLE;
+const BLACK_FADE  = 280;                       // white -> black cut
+const BLACK_HOLD  = 520;                        // blank pause
+const END_START   = YEARS_END + BLACK_FADE + BLACK_HOLD;
+const CODE_IN     = 520;                         // "404" in
+const TEXT_GAP    = 380;                         // delay before "Not Found"
+const TEXT_IN     = 420;
+const END_HOLD    = 1500;
+const END_OUT     = 620;
+const END_TOTAL   = Math.max(CODE_IN, TEXT_GAP + TEXT_IN) + END_HOLD + END_OUT;
+
+const TOTAL = END_START + END_TOTAL;            // full duration (ms)
+
+// ---- easing ----
+const clamp01 = (x) => x < 0 ? 0 : x > 1 ? 1 : x;
+const easeOut = (x) => 1 - Math.pow(1 - clamp01(x), 3);
+const easeIn  = (x) => Math.pow(clamp01(x), 3);
+const easeIO  = (x) => { x = clamp01(x); return x < 0.5 ? 4*x*x*x : 1 - Math.pow(-2*x+2,3)/2; };
+
+// ---- elements ----
+const $ = (id) => document.getElementById(id);
+const elPaper   = $('paper');
+const elVig     = $('vignette');
+const elWhite   = $('white-content');
+const elComeback= $('comeback');
+const elSpinner = $('spinner');
+const elYear    = $('year');
+const elGrain   = $('grain');
+const elFlicker = $('flicker');
+const elStage   = $('stage');
+const elLeak    = $('leak');
+const scratchEls= Array.from(document.querySelectorAll('#scratches i'));
+const dustEls   = Array.from(document.querySelectorAll('#dust b'));
+const elEnd     = $('endcard');
+const elCode    = $('err-code');
+const elText    = $('err-text');
+
+// deterministic pseudo-random — same `n` always gives same value, so the
+// flicker/scratches are identical in preview and in the exported MP4.
+const rnd = (n) => { const s = Math.sin(n * 12.9898) * 43758.5453; return s - Math.floor(s); };
+
+function seek(t) {
+  const W = window.innerWidth || 1080;
+  const slide = W * 0.55;                       // off-screen travel distance
+
+  // ----- white stage visibility (cut to black after the years finish) -----
+  const whiteVis = 1 - easeIO((t - YEARS_END) / BLACK_FADE);
+  elPaper.style.opacity   = whiteVis;
+  elVig.style.opacity     = whiteVis;
+  elWhite.style.opacity   = whiteVis;
+  elGrain.style.opacity   = 0.10 * whiteVis;
+
+  // ----- "Comeback" fades in -----
+  const introP = easeOut(t / INTRO_FADE);
+  elComeback.style.opacity = introP;
+  elComeback.style.transform = `translateY(${(1 - introP) * 2.5}vmin)`;
+
+  // ----- spinner: continuous rotation, fades in with intro -----
+  const rot = (t / 900) * 360;                  // ~0.9s per turn
+  elSpinner.style.transform = `rotate(${rot}deg)`;
+  elSpinner.style.opacity = introP;
+
+  // ----- years: slide + fade, one at a time -----
+  if (t >= YEARS_START && t < YEARS_END) {
+    const k = Math.floor((t - YEARS_START) / YEAR_CYCLE);
+    const idx = Math.min(k, YEARS.length - 1);
+    const local = (t - YEARS_START) - k * YEAR_CYCLE;
+    elYear.textContent = YEARS[idx];
+
+    let x, op;
+    if (local < YEAR_IN) {                       // come in from the right
+      const p = easeOut(local / YEAR_IN);
+      x = slide * (1 - p); op = p;
+    } else if (local < YEAR_IN + YEAR_HOLD) {     // hold centered
+      x = 0; op = 1;
+    } else {                                      // leave to the left
+      const p = easeIn((local - YEAR_IN - YEAR_HOLD) / YEAR_OUT);
+      x = -slide * p; op = 1 - p;
+    }
+    elYear.style.opacity = op;
+    elYear.style.transform = `translateX(${x}px)`;
+  } else {
+    elYear.style.opacity = 0;
+  }
+
+  // ========================  VINTAGE FILM TREATMENT  ========================
+  // everything below is a function of `t`, so it's frame-perfect on export.
+
+  // -- moving grain (re-positions every frame) --
+  const gx = (rnd(Math.floor(t / 33) + 1) * 2 - 1) * 60;
+  const gy = (rnd(Math.floor(t / 33) + 7) * 2 - 1) * 60;
+  elGrain.style.backgroundPosition = `${gx | 0}px ${gy | 0}px`;
+  elGrain.style.opacity = (0.16 + rnd(Math.floor(t / 50)) * 0.07) * whiteVis;
+
+  // -- exposure flicker: projector "breathing" + occasional dark frames --
+  const fb = Math.floor(t / 45);                 // ~22 changes/sec
+  let flick = 0.05 + rnd(fb) * 0.10;             // constant gentle pulse
+  if (rnd(fb + 0.5) > 0.86) flick += 0.22;       // sudden darker frame
+  elFlicker.style.opacity = flick;
+
+  // -- warm light-leak that swells now and then --
+  const leakWave = Math.pow(Math.max(0, Math.sin(t * 0.0016)), 3);
+  const leakBurst = rnd(Math.floor(t / 700)) > 0.55 ? 1 : 0.15;
+  elLeak.style.opacity = (leakWave * 0.7 * leakBurst) * whiteVis;
+
+  // -- gate weave: the whole frame jitters like film in the gate --
+  const wb = Math.floor(t / 70);                 // jumps ~14x/sec
+  const wx = (rnd(wb) * 2 - 1) * 4.5;
+  const wy = (rnd(wb + 13) * 2 - 1) * 5.5;
+  const wr = (rnd(wb + 29) * 2 - 1) * 0.18;       // tiny rotation
+  elStage.style.transform = `translate(${wx.toFixed(2)}px, ${wy.toFixed(2)}px) rotate(${wr.toFixed(3)}deg)`;
+
+  // -- vertical scratches: flicker on/off and jump horizontally --
+  for (let j = 0; j < scratchEls.length; j++) {
+    const sb = Math.floor(t / (260 + j * 90));
+    const on = rnd(sb + j * 7.1) > 0.5;
+    const el = scratchEls[j];
+    if (on) {
+      el.style.left = (rnd(sb + j * 3.3) * 100).toFixed(1) + '%';
+      el.style.width = (1 + Math.floor(rnd(sb + j * 5.7) * 2)) + 'px';
+      el.style.opacity = (0.25 + rnd(Math.floor(t / 40) + j) * 0.45) * whiteVis;
+    } else {
+      el.style.opacity = 0;
+    }
+  }
+
+  // -- dust / hair specks: short-lived, scattered --
+  for (let j = 0; j < dustEls.length; j++) {
+    const db = Math.floor(t / (90 + j * 31));
+    const on = rnd(db + j * 11.3) > 0.62;
+    const el = dustEls[j];
+    if (on) {
+      const sz = 2 + Math.floor(rnd(db + j) * 5);
+      el.style.left = (rnd(db + j * 2.7) * 100).toFixed(1) + '%';
+      el.style.top  = (rnd(db + j * 4.9) * 100).toFixed(1) + '%';
+      el.style.width = sz + 'px';
+      el.style.height = sz + 'px';
+      el.style.opacity = (0.4 + rnd(db + j * 6.1) * 0.4) * whiteVis;
+    } else {
+      el.style.opacity = 0;
+    }
+  }
+
+  // ----- end card (404 / Not Found) -----
+  if (t >= END_START) {
+    const e = t - END_START;
+    elEnd.style.opacity = 1;
+
+    // overall out fade at the very end
+    const outP = easeIn((e - (END_TOTAL - END_OUT)) / END_OUT);
+    const outVis = 1 - outP;
+
+    // 404 scales + fades in
+    const cIn = easeOut(e / CODE_IN);
+    elCode.style.opacity = cIn * outVis;
+    elCode.style.transform = `scale(${0.7 + 0.3 * cIn})`;
+
+    // "Not Found" rises + fades in after a beat
+    const tIn = easeOut((e - TEXT_GAP) / TEXT_IN);
+    elText.style.opacity = clamp01(tIn) * outVis;
+    elText.style.transform = `translateY(${(1 - clamp01(tIn)) * 4}vmin)`;
+  } else {
+    elEnd.style.opacity = 0;
+  }
+}
+
+// ---- expose for the frame-capture exporter ----
+window.__seek = seek;
+window.__duration = TOTAL;
+
+// ---- real-time playback (just open the file in a browser) ----
+let startTs = null;
+let playing = true;
+function frame(now) {
+  if (startTs === null) startTs = now;
+  let t = now - startTs;
+  if (t >= TOTAL) { t = TOTAL; }                 // hold the last frame
+  seek(t);
+  if (t < TOTAL && playing) requestAnimationFrame(frame);
+}
+
+// click / press R to replay
+function start() { startTs = null; playing = true; requestAnimationFrame(frame); }
+document.addEventListener('click', start);
+document.addEventListener('keydown', (e) => { if (e.key.toLowerCase() === 'r') start(); });
+
+// wait for fonts so the first frame looks right, then play
+seek(0);
+if (document.fonts && document.fonts.ready) {
+  document.fonts.ready.then(() => start());
+} else {
+  start();
+}
+</script>
+</body>
+</html>

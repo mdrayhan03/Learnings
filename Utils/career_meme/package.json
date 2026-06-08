@@ -1,0 +1,14 @@
+{
+  "name": "career-meme",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Comeback -> 2022..2026 -> 404 Not Found meme animation + MP4 export",
+  "scripts": {
+    "render": "node render.js",
+    "render:square": "W=1080 H=1080 node render.js",
+    "render:wide": "W=1920 H=1080 node render.js"
+  },
+  "dependencies": {
+    "puppeteer": "^22.0.0"
+  }
+}
