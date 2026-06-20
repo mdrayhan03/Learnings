@@ -25,3 +25,4 @@
 | | **Chain of Responsibility** | Support Ticket System | Pass a request through a chain: `Level1Tech` -> `Manager` -> `CEO`. Each handler decides to solve it or pass it on. | ✅ **Done** |
 | | **Visitor** | Insurance Risk Calculator | Add new operations (like `calculate_tax`) to a group of objects (Building, Car) without changing their classes. | ✅ **Done** |
 | | **Interpreter** | Custom Math Parser | Define a grammar for a simple language (e.g., "5 PLUS 2") and evaluate it using a tree of expressions. | ✅ **Done** |
+
