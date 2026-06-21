@@ -13,7 +13,7 @@ This exam evaluates your ability to translate abstract requirements into clean, 
 ## 🟢 STEP 1: EASY (Single Component Mechanics & Structural Cleanliness)
 *Focus: Mastering basic encapsulation, preventing data leaks, and applying structural GoF patterns cleanly.*
 
-### Question 1: The Unified Notification Dispatcher
+### Question 1: The Unified Notification Dispatcher(done)
 * **Scenario:** You are building an enterprise alert system. The system must support sending notifications via `Email`, `SMS`, and `Slack Push`. 
 * **Requirements:**
   * The core application business logic should not care which delivery mechanism is being used.
@@ -21,7 +21,7 @@ This exam evaluates your ability to translate abstract requirements into clean, 
   * Users can configure their profiles to send an alert via *both* Email and Slack simultaneously using a single invocation.
 * **Task:** Write the class structure and interfaces using the **Strategy** and **Decorator/Composite** patterns to achieve this setup cleanly.
 
-### Question 2: The Multi-Format Custom Configuration Parser
+### Question 2: The Multi-Format Custom Configuration Parser(done)
 * **Scenario:** Your application needs to read configuration settings. The configurations can come from a standard `.json` string, an `.xml` payload, or an environment variable mapping.
 * **Requirements:**
   * The internal application client only speaks native Python dictionaries.
@@ -33,7 +33,7 @@ This exam evaluates your ability to translate abstract requirements into clean, 
 ## 🟡 STEP 2: MEDIUM (Multi-Entity Real-World Simulations & State Engines)
 *Focus: Tracking entity relationships, matrix layouts, allocations, and managing complex lifecycles using state tracking.*
 
-### Question 3: The Automated Vending Machine Engine
+### Question 3: The Automated Vending Machine Engine(done)
 * **Scenario:** Design the core logic for a physical vending machine. 
 * **Requirements:**
   * **The States:** `IdleState` (No money inserted), `HasMoneyState` (Money inserted, waiting for selection), `DispensingState` (Processing inventory release), and `OutOfStockState`.

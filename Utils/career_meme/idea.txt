@@ -1,0 +1,11 @@
+I want to make a meme video using code which one is better? should I use html, css or any python way to do?
+What I want ->
+- in the white screen with vintage cinematography in the middle I will have a loading spinner
+- before the loadin spinner Comeback text in bold and perfect font
+- under the loading spinner left to right going year from 2022 to 2026 
+- year comes from right and in middle wait for 0.7s and then go left
+- after 2026 then entire screen will black(blank)
+- after that an animation in-out with text 404 and 2nd line Not Found in red color
+
+now suggest me how to do this?
+and is there any way to make that as video or save as video and which one will be better html, css, js or python?
