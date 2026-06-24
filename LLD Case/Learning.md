@@ -343,3 +343,108 @@ When a thread attempts to checkout a resource, it must follow a strict sequentia
 1. **Avoid Semaphore Scope Overlap:** Never run heavy code logic or database queries *inside* the Mutex Lock that protects your array indices. Keep the array lock highly localized around the list actions (`pop` or `append`), while letting the semaphore scope wrap around the execution timeline.
 2. **Defensive Ordering Primitives:** Always acquire the Semaphore *before* acquiring the shared array Mutex Lock. If you reverse the order (Lock then Semaphore), a thread will lock the array, block on an exhausted semaphore, and freeze the entire system into an unrecoverable **Deadlock** state.
 3. **Graceful Timeout Policies:** In high-availability web layers, avoid letting threads block indefinitely. Utilize timed acquisition checks (`_semaphore.acquire(timeout=2.0)`) to gracefully reject connections and bubble up a `503 Service Unavailable` error code if a pool remains choked for too long.
+
+# 🔒 Low-Level Design Deep-Dive: Deadlock Prevention & Resource Ordering
+
+---
+
+## 🏛️ 1. Theoretical Foundation
+
+In high-concurrency systems managing multi-resource allocations (such as bank ledger transfers or inventory management systems), operations frequently require exclusive access to multiple independent entities simultaneously. Without careful design, these operations risk hitting a **Deadlock**—a state where two or more threads are permanently blocked, each holding a resource the other needs to proceed.
+
+### 🔄 Anatomy of a Deadlock (The Deadly Embrace)
+For a deadlock to occur, the system must meet all four **Coffman Conditions**:
+1. **Mutual Exclusion:** Resources can only be held by one thread at a time.
+2. **Hold and Wait:** A thread holds an allocated resource while waiting to acquire another.
+3. **No Preemption:** Resources cannot be forcibly stripped away from a thread.
+4. **Circular Wait:** Thread 1 holds Resource A and waits for B, while Thread 2 holds Resource B and waits for A.
+
+
+
+---
+
+## ⚙️ 2. Prevention Strategy: Strict Global Resource Ordering
+
+The most effective way to eliminate the deadlock risk is to break the **Circular Wait** condition. Instead of letting execution threads acquire locks based on the order arguments happen to arrive in a function parameters list, the engine enforces a strict **Global Resource Order**.
+
+### ⚖️ The Sorting Blueprint
+Before any lock acquisition sequence begins, the system compares the unique identifiers (e.g., account alphanumeric UUIDs or integer primary keys) of the target resources:
+
+$$\text{Target Order} = \text{Sort}(\text{Resource}_A, \text{Resource}_B)$$
+
+By ensuring that the lower-valued resource ID is *always* locked first, opposing threads executing concurrent inverse tasks (e.g., Transfer $A \rightarrow B$ vs. Transfer $B \rightarrow A$) are forced to queue up linearly for the first lock, preventing a cross-lock freeze entirely.
+
+---
+
+## 🌐 3. Moving to Distributed Environments: Redis & Redlock
+
+When scaling out from a single-instance monolith to horizontally scaled microservices, shared application memory (`threading.Lock`) can no longer protect states because data is split across independent servers. The architecture must upgrade to a **Distributed Lock Manager (DLM)** like Redis.
+
+
+
+### ⚠️ The Distributed Lock Trap
+Simply shifting lock keys to Redis (`SETNX lock:account_id`) does not magically eliminate deadlocks. If Server 1 locks Account A in Redis, and Server 2 locks Account B in Redis at the exact same millisecond, they will still deadlock remotely if they try to grab the opposing cross-locks out of order.
+
+### 🛡️ Production Distributed Defenses
+1. **Distributed Sorting:** Maintain the identical Resource Ordering strategy inside the distributed container logic before issuing lock requests to the remote Redis cluster.
+2. **Lease Timout (TTL) Guardrails:** Unlike native in-memory system primitives that can hang indefinitely, distributed locks *must* use strict Time-To-Live expiration values (e.g., 2000ms). If an unexpected node failure or slow network call causes a circular block, Redis automatically expires the key.
+3. **Randomized Exponential Back-off Retries:** When a worker fails to acquire a resource lock because it is currently busy, it should release any assets it already holds, step back for a randomized millisecond delay window, and loop back to retry the transaction from scratch. This breaks timing synchronization loops and mitigates **Livelocks**.
+
+# 📊 Low-Level Design Deep-Dive: Bounded Thread Pools & Backpressure
+
+---
+
+## 🏛️ 1. Theoretical Foundation
+
+In high-throughput ingestion architectures (such as real-time log processors, metric aggregators, or telemetry streams), unmanaged thread creation is a critical anti-pattern. Spawning a new native Operating System (OS) thread for every incoming data packet leads to **thread exhaustion** and high memory overhead, ultimately crashing the runtime via Out-Of-Memory (OOM) errors.
+
+To achieve industrial stability, the system must decouple **Ingestion** from **Processing** using a dedicated execution boundary known as a **Thread Pool**.
+
+
+
+---
+
+## ⚙️ 2. The Core Primitives
+
+A resilient thread pool relies on three distinct architectural layers working in lockstep:
+
+1. **Static Worker Pool:** A predefined, static array of long-lived threads instantiated at application boot time. These threads run an infinite loop, pulling tasks and executing them without terminating.
+2. **Bounded FIFO Buffer:** A thread-safe queue capped at a strict maximum capacity threshold ($N$). This acts as a localized buffer to absorb sudden micro-spikes in traffic.
+3. **Poison Pill Pattern:** A specialized signaling mechanism used for graceful shutdowns. When a `None` or sentinel object is pushed to the queue, it explicitly signals a worker thread to break its infinite loop and terminate cleanly.
+
+---
+
+## 🛑 3. Backpressure & The Caller-Runs Policy
+
+When incoming traffic consistently outpaces the processing capacity of the background worker pool, the bounded queue will eventually hit its maximum capacity threshold. To protect system memory, we must enforce a **Rejection Policy**.
+
+While some systems drop data entirely (Abort/Discard), high-integrity logging frameworks prefer the **Caller-Runs Policy**.
+
+```
+[Incoming Log Streams]
+       │
+       ▼
+┌───────────────┐        Is Queue Full?
+│ Ingestion     ├──────────────────────────────┐
+│ (Main Thread) │                              │
+└───────┬───────┘                              │ YES
+        │ NO                                   ▼
+        ▼                          ┌───────────────────────┐
+┌───────────────┐                  │ Synchronous Fallback  │
+│ Bounded Queue │                  │ Main Thread executes  │
+│  [ X X X X ]  │                  │  the processing task  │
+└───────┬───────┘                  └───────────┬───────────┘
+        │                                      │
+        ▼ (Workers Pull)                       ▼ (Self-Throttling)
+┌──────────────────────────────────────────────-───────────┐
+│ Background Worker Thread Pool (Worker 1, 2, 3...)        │
+└──────────────────────────────────────────────────────────┘
+```
+
+### 🏎️ The Mechanics of Self-Throttling
+When a submission is made to a full buffer, the queue immediately rejects the operation. Under **Caller-Runs**, the submission thread (often the primary event-loop or ingestion engine thread) intercepts this rejection and executes the task's execution logic itself inside its own stack frame.
+
+This creates a beautiful, natural **backpressure feedback loop**:
+* Because the ingestion thread is blocked parsing the current rejected log event, it is physically incapable of accepting new incoming logs.
+* Network ingestion frames buffer at the OS socket layer instead of piling up inside application RAM.
+* This temporary freeze gives the background thread pool workers the vital millisecond windows they need to drain the internal queue back down to a safe equilibrium level.
