@@ -124,21 +124,21 @@
 ## 5. How the Web Works
 - HTTP model, methods, status codes — ✅ — request/response; GET/POST/etc.; 2xx/4xx/5xx meanings.
 - Headers — ✅ — metadata on requests/responses (content-type, auth, caching).
-- Cookies & sessions — 🟡 — how servers remember a logged-in user across requests.
-- HTML / CSS — ✅ / 🟡 — page structure and styling (box model, flexbox, grid).
-- Responsive design — 🟡 — layouts that adapt to screen size.
+- Cookies & sessions — ✅ — how servers remember a logged-in user across requests (cookie = opaque session ID; real identity lives server-side; HttpOnly/SameSite; sessions vs JWT).
+- HTML / CSS — ✅  — page structure and styling (box model, flexbox, grid).
+- Responsive design — ✅ — layouts that adapt to screen size.
 - JavaScript fundamentals — ✅ — the browser's scripting language.
-- DOM & events — 🟡 — manipulating the page tree and reacting to user input.
+- DOM & events — ✅ — manipulating the page tree and reacting to user input.
 - Client–server model — ✅ — who requests vs who serves.
 - DNS resolution — ✅ — turning domain names into IP addresses.
-- Browser rendering — 🟡 — how HTML/CSS/JS become pixels (parse → layout → paint).
+- Browser rendering — ✅ — how HTML/CSS/JS become pixels (parse → layout → paint).
 
 ## 6. Databases (Basics)
 - Relational model — ✅ — data as tables of rows/columns with relationships.
 - SQL CRUD + WHERE/ORDER BY/GROUP BY — ✅ — create/read/update/delete + filter/sort/aggregate.
-- Joins — 🟡 — combining rows across tables (inner/left/right).
+- Joins — ✅ — combining rows across tables (inner/left/right).
 - Keys & relationships — ✅ — primary/foreign keys; one-to-many, many-to-many.
-- Normalization — 🟡 — structuring tables (1NF–3NF) to remove redundancy.
+- Normalization — ✅ — structuring tables (1NF–3NF) to remove redundancy.
 - ORM (Django ORM, MongoEngine) — ✅ 🏭 — querying the DB through Python objects.
 - NoSQL basics — ✅ 🏭 — document/key-value stores; schema-flexible (MongoDB).
 - Migrations — ✅ — versioned, repeatable schema changes.
@@ -149,15 +149,15 @@
 - Request handling & responses — ✅ — parsing input, returning JSON/HTML.
 - Build a REST API — ✅ 🏭 — resource endpoints over HTTP.
 - Templates / serving HTML — ✅ — server-rendered pages.
-- Config & env separation — 🟡 — per-environment settings (dev/staging/prod).
+- Config & env separation — ✅🏭 — per-environment settings (dev/staging/prod).
 - Basic auth (login/logout) — ✅ — authenticating users.
 
 ## 8. Testing (Basics)
 - Why we test — ✅ — catching regressions and documenting behavior.
 - Writing a unit test — ✅ — verifying one function/unit in isolation.
 - Assertions — ✅ — stating expected outcomes.
-- Running a test suite — 🟡 — executing all tests and reading results.
-- Read a failing test & fix — 🟡 — using a red test to locate a bug.
+- Running a test suite — ✅ — executing all tests and reading results.
+- Read a failing test & fix — ✅ — using a red test to locate a bug.
 
 ## 9. Dev Tooling
 - IDE proficiency (VS Code) — ✅ — editor features, extensions, shortcuts.
@@ -169,7 +169,7 @@
 - Problem decomposition — ✅ — breaking a big task into small solvable pieces.
 - Searching docs / SO — ✅ — finding answers efficiently.
 - Asking good questions — ✅ — giving context so others can help.
-- Commit messages / READMEs — 🟡 — communicating intent and onboarding others.
+- Commit messages / READMEs — ✅ — communicating intent and onboarding others.
 - Time management — ✅ — prioritizing and scoping work.
 
 ### ✅ Entry-Level Verdict
