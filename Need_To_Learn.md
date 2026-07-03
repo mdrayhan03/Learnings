@@ -101,25 +101,25 @@
 ## 3. Version Control — Git & GitHub  *(strong)*
 - init / clone / status / add / commit — ✅ — the core local Git loop.
 - `.gitignore` — ✅ — excluding files (secrets, build artifacts) from version control.
-- History (log, diff, blame) — 🟡 — inspecting what changed, when, and by whom.
-- Undo (reset, revert, restore) — 🟡 — safely rolling back changes at different levels.
+- History (log, diff, blame) — ✅ — inspecting what changed, when, and by whom.
+- Undo (reset, revert, restore) — ✅ — safely rolling back changes at different levels.
 - Feature/task branches — ✅ 🏭 — isolating work per feature before merging.
-- Merging — ✅ — combining branches.
-- Rebasing — 🟡 — replaying commits for a linear history (vs merge commits).
-- Merge-conflict resolution — ✅ — reconciling competing edits to the same lines.
-- Pull requests — ✅ — proposing + reviewing changes before merge.
-- Issues (create/link/close) — ✅ — tracking work and bugs.
+- Merging — ✅ 🏭 — combining branches.
+- Rebasing — ✅ 🏭 — replaying commits for a linear history (vs merge commits).
+- Merge-conflict resolution — ✅ 🏭 — reconciling competing edits to the same lines.
+- Pull requests — ✅ 🏭 — proposing + reviewing changes before merge.
+- Issues (create/link/close) — ✅ 🏭 — tracking work and bugs.
 - Project boards / kanban — ✅ — visual task management on GitHub Projects.
-- Tags & releases — 🟡 — marking versioned snapshots for distribution.
+- Tags & releases — ✅ — marking versioned snapshots for distribution.
 
 ## 4. Command Line & Linux
 - Navigation / file ops / viewing — ✅ — cd/ls/cp/mv/rm/cat/grep etc.
 - Pipes & redirection — ✅ — chaining commands (`|`) and routing output (`>`, `2>&1`).
 - Env vars / `.env` — ✅ — configuration via the environment, kept out of code.
-- File permissions — 🟡 — chmod/chown; read/write/execute and ownership.
-- Processes (ps/top/kill) — 🟡 — listing, monitoring, and terminating running programs.
+- File permissions — ✅ — chmod/chown; read/write/execute and ownership.
+- Processes (ps/top/kill) — ✅ — listing, monitoring, and terminating running programs.
 - SSH & remote access — ✅ — secure shell into remote servers; key-based auth.
-- Bash scripting — 🟡 — automating tasks with shell scripts.
+- Bash scripting — ✅ — automating tasks with shell scripts.
 
 ## 5. How the Web Works
 - HTTP model, methods, status codes — ✅ — request/response; GET/POST/etc.; 2xx/4xx/5xx meanings.
@@ -161,8 +161,8 @@
 
 ## 9. Dev Tooling
 - IDE proficiency (VS Code) — ✅ — editor features, extensions, shortcuts.
-- Debugger (breakpoints, step) — 🟡 — pausing execution to inspect state (beyond print).
-- Linters / formatters (flake8, black, isort) — 🟡 — auto-enforcing style and catching smells.
+- Debugger (breakpoints, step) — ✅ — pausing execution to inspect state (beyond print).
+- Linters / formatters (flake8, black, isort) — ✅ — auto-enforcing style and catching smells.
 - Reading docs — ✅ — learning APIs from official documentation.
 
 ## 10. Soft Skills
