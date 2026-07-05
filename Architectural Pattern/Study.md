@@ -318,3 +318,117 @@ Let's build a mock Asynchronous Event Loop utilizing a centralized broker simula
 
 **Objective**
 Create an asynchronous ecosystem where an OrderService announces when transactions occur. A completely independent InventoryService and an EmailService must dynamically catch these announcements and execute their work concurrently.
+
+# MVC
+## What is MVC
+The core goal of MVC (Model-View-Controller) is to separate the data of your application from the way it is displayed, allowing developers to change the visual layout without modifying the underlying business logic data structures. It isolates your system into three distinct components with specific responsibilities:
+
+- The Model (Data & Logic): The single source of truth for your data and its state mutation rules. It contains nothing but structural classes and raw validation checks. It is completely oblivious to web browsers, HTML, CSS, or terminal UI inputs.
+
+- The View (The User Interface): The visual representation of the model. In a server-rendered context, the view is a static text/HTML template with placeholders (e.g., {{ task_list }}). It accepts raw data injected from the outside, loops over it to form strings, and outputs the final compiled presentation layer.
+
+- The Controller (The Orchestrator): The brain that coordinates the workflow. It acts as the entryway that listens for direct user input (like form actions or simulated API clicks). It asks the Model to alter its data state, takes the fresh results, passes them to the View to compile, and returns the final rendered presentation back to the user.
+
+## Where is it Used?
+- Server-Side Rendered (SSR) Web Frameworks: Traditional monolith frameworks like Django (Python), Laravel (PHP), Ruby on Rails (Ruby), and ASP.NET MVC (C#).
+
+- Template Engines: Used extensively when generating web pages dynamically on backend servers before sending clean HTML documents down to a client's web browser.
+
+## Why Use It?
+- Separation of Concerns: UI designers can rewrite the HTML layouts inside the View templates entirely without risking breaking database mutations or core backend computational code in the Model.
+
+- Code Reusability: Because the Model is separated from presentation mechanics, the same backend business data structures can be repurposed to feed a web template or a text-based terminal view effortlessly.
+
+- Easier Testing: You can write automated tests to verify your database structures and input validation logic without needing to compile or check visual interface layouts.
+
+## The Mini-Project Idea: Server-Rendered Task Manager
+Let's build a lightweight task tracker that handles state changes and transforms them into mock rendered HTML layouts directly from the server engine.
+
+**Objective**
+Build a system where a Controller captures input, modifies a Model, and injects data directly into a static View template text layout.
+
+# MVP
+## What is MVP
+MVP (Model-View-Presenter) is a derivation of the MVC pattern, engineered specifically for desktop applications (like Windows Forms, Swing) and early mobile applications (like early Android native development).
+
+In traditional MVC, the View can sometimes read data directly from the Model. MVP cuts this connection completely. The View becomes completely passive (it has zero logic and doesn't know what data it is displaying), while the Presenter acts as an absolute supervisor handling all synchronization.
+
+The Model (Data & Domain Rules): Same as MVC—the structural data schema layer and backend validation engine. It has absolutely no knowledge of UI components.
+
+- The View (The Passive Component Interface): In MVP, the View is a concrete UI component panel (like a desktop form layout or mobile screen view container). It implements a strict View Interface. It doesn't query databases or format data strings—it simply exposes properties (like get_entered_text()) and methods (like display_error_message(text)).
+
+- The Presenter (The Supervisor): The core coordinator. It listens to UI events forwarded by the View, manually extracts data from the View using the view interface, passes that data to the Model for processing, and then commands the View exactly how and what to re-render.
+
+## Where is it Used?
+- Classic Native App Development: Historically popular in Android (before Jetpack Compose/Architecture Components) and Windows Forms/WPF architecture profiles.
+
+- Highly Unit-Testable UI Engines: Used when frontend visual tests are too slow or fragile, allowing developers to fully unit-test all UI behavior simply by mocking the View interface and passing it to the Presenter.
+
+## Why Use It?
+- True Passive View Isolation: Because the View is stripped of all structural logic loop processing, you can swap out an entire Android UI View XML file for an iOS Swift layout, or a Terminal console form, without touching any synchronization instructions inside the Presenter.
+
+- Elimination of "Massive Controller" Clutter: It forces explicit two-way interface definitions, keeping data manipulation tasks modularized.
+
+## The Mini-Project Idea: Strict Desktop/Mobile Input Form
+Let's build a desktop/mobile style profile input form engine where the View is treated as a component container with zero rendering logic.
+
+**Objective**
+Build a system where the View is completely passive. The Presenter manually extracts data from the View and pushes it to the Model using strict two-way interfaces.
+
+# MVVM
+## What is MVVM
+MVVM (Model-View-ViewModel) was created by Microsoft architects in 2005 to solve a massive issue with MVP: writing thousands of tedious lines of manual synchronization code (view.set_text(), view.get_input()).
+
+Instead of forcing a Presenter to manually pass data back and forth, MVVM introduces Data Binding. The View and the ViewModel are dynamically linked. When data changes in the ViewModel, the View updates on the screen automatically. When the user interacts with the View, the data shifts inside the ViewModel instantly—without any manual UI manipulation code.
+
+- The Model (Data & Access Layer): The underlying domain entities and business transactions. It remains completely unaware of the user interface.
+
+- The View (The Layout / Visual Structure): The structure and appearance of what the user sees on the screen. It doesn't contain any business calculations. Instead, its UI elements are directly bound to the properties of the ViewModel.
+
+- The ViewModel (The State & Command Binder): An abstraction of the view that exposes public state properties and executable action hooks (Commands). It fetches raw information from the Model and prepares it into clean properties that the View can bind to directly. It never directly references UI elements or widgets.
+
+## Where is it Used?
+- Modern Web Frontend Frameworks: Vue.js, Angular, React (via state binds), and Knockout.js.
+
+- Native Applications: Android development (using Jetpack Architecture ViewModels and Data Binding compiler), iOS (SwiftUI with @StateObject), and cross-platform tools like Flutter and MAUI.
+
+## Why Use It?
+- Elimination of Boilerplate UI Synchronizations: No more manually searching for a text input field, checking if it's empty, and writing .text = value. The binder engine takes care of updating properties automatically.
+
+- Parallel Production Pipelines: Frontend designers can alter the layout inside the View files safely, as long as they link the UI properties to the variable name keys inside the ViewModel.
+
+- Pure Functional Testing: Because the ViewModel contains no actual layout frameworks or components, you can completely verify your UI's state behaviors with rapid, automated unit tests.
+
+## The Mini-Project Idea: Reactive Live-Search Dashboard
+Let's build a mini data-bound view model engine that simulates how frameworks like Vue or Angular link real-time user keystrokes straight to state properties and UI rendering cycles.
+
+**Objective**
+Build a modern frontend engine utilizing Data Binding. When a state variable shifts in the ViewModel, the View UI elements automatically re-render without manual intervention.
+
+# MVI
+## What is MVI
+MVI (Model-View-Intent) is the newest evolution of presentation patterns, inspired heavily by functional programming paradigms and state-management architectures like Redux. It was created to solve a lingering issue in MVVM: when an app has dozens of live data-bindings, properties can update in unpredictable sequences, creating hard-to-debug "race conditions" where the screen enters a broken UI state.
+
+MVI completely fixes this by enforcing an absolute Unidirectional Data Flow (UDF). Data can only move in a single, cyclic circle. Every component is completely immutable—instead of updating a variable, you discard the old state and emit a brand-new complete state object.
+
+- The Intent (User Action/Desire): Not to be confused with Android's routing Intent, in this pattern an Intent represents a plain data object describing the user's intention to change something (e.g., IncrementCounterIntent, SubmitFormIntent). The View translates raw inputs into an Intent and dispatches it.
+
+- The Model (The Immutable State): In MVI, the Model is not a database class. The Model represents a single, complete, immutable snapshot of the entire screen's visual state at a specific millisecond in time (e.g., DashboardState(is_loading=True, items=[], error=None)).
+
+- The View (The Pure State Renderer): A pure function of the State. It listens to a stream of new Model State snapshots. When a new snapshot arrives, it strips the old layout and builds the new frame from scratch. It contains zero logic and cannot alter variables.
+
+## Where is it Used?
+- Modern Declarative UI Frameworks: Android native development (Jetpack Compose), iOS development (SwiftUI combined with unidirectional architectures like TCA), and advanced web apps utilizing React with Redux or the Elm architecture.
+
+## Why Use It?
+- Absolute State Predictability: Because the screen state is a single immutable object, you can record every state object sequentially. If a user runs into a bug, you can look at the exact log trail of state changes to reproduce it flawlessly.
+
+- Thread Safety & No Race Conditions: Variables cannot be mutated asynchronously from different operations because state properties are completely read-only.
+
+- Unidirectional Cleanness: The data loop moves in one single direction: View ──> Intent ──> State ──> View. There are no hidden back-and-forth side channels.
+
+## The Mini-Project Idea: Unidirectional State Counter
+Let's build a functional state counter layout to witness how a single entry point captures user intentions, updates an immutable model snapshot, and feeds it right back to the layout engine.
+
+**Objective**
+Build a reactive system using single-directional data flow. User actions generate an "Intent", which updates a single immutable "State" object that gets pushed back to the View.

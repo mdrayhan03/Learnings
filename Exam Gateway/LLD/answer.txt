@@ -323,3 +323,502 @@ if __name__ == "__main__":
 
     thread1.join()
     thread2.join()
+
+------------------------------------------------------------------------------------
+
+Q4
+from abc import ABC, abstractmethod
+import heapq
+from typing import List, Dict
+
+# ==========================================
+# 1. THE CORE ENTITIES (Open for Extension)
+# ==========================================
+class ParkingSpot(ABC): 
+    def __init__(self, floor, spot_number: int):
+        self.floor = floor  # References Floor object
+        self.spot_number = spot_number
+        self.is_free = True
+
+    def __lt__(self, other):
+        if self.floor.floor_no == other.floor.floor_no:
+            return self.spot_number < other.spot_number
+        return self.floor.floor_no < other.floor.floor_no
+
+class CompactSpot(ParkingSpot): pass
+class MediumSpot(ParkingSpot): pass
+class LargeSpot(ParkingSpot): pass
+class ElectricSpot(ParkingSpot): pass  # Added seamlessly!
+
+
+# ==========================================
+# 2. THE SPECIFICATION PATTERN (The OCP Shield)
+# ==========================================
+class ISpsification(ABC):
+    @abstractmethod
+    def is_satisfied_by(self, spot: ParkingSpot) -> bool:
+        pass
+
+# Concrete Rules encapsulating matching logic completely outside the Parking Lot
+class MotorcycleSpecification(ISpsification):
+    def is_satisfied_by(self, spot: ParkingSpot) -> bool:
+        # Motorcycles can fit into any standard space
+        return isinstance(spot, (CompactSpot, MediumSpot, LargeSpot))
+
+class CarSpecification(ISpsification):
+    def is_satisfied_by(self, spot: ParkingSpot) -> bool:
+        return isinstance(spot, (MediumSpot, LargeSpot))
+
+class TruckSpecification(ISpsification):
+    def is_satisfied_by(self, spot: ParkingSpot) -> bool:
+        return isinstance(spot, LargeSpot)
+
+class ElectricVehicleSpecification(ISpsification):
+    def is_satisfied_by(self, spot: ParkingSpot) -> bool:
+        # Strictly requires a dedicated charging space
+        return isinstance(spot, ElectricSpot)
+
+
+# ==========================================
+# 3. VEHICLE DOMAIN LAYER
+# ==========================================
+class Vehicle(ABC): 
+    def __init__(self, vehicle_id: str, specification: ISpsification):
+        self.vehicle_id = vehicle_id
+        self.specification = specification
+
+    def can_fit_in(self, spot: ParkingSpot) -> bool:
+        return self.specification.is_satisfied_by(spot)
+
+# Derived variants inject their rules dynamically
+class Bike(Vehicle):
+    def __init__(self, vehicle_id: str):
+        super().__init__(vehicle_id, MotorcycleSpecification())
+
+class Car(Vehicle):
+    def __init__(self, vehicle_id: str):
+        super().__init__(vehicle_id, CarSpecification())
+
+class Truck(Vehicle):
+    def __init__(self, vehicle_id: str):
+        super().__init__(vehicle_id, TruckSpecification())
+
+class ElectricCar(Vehicle):
+    def __init__(self, vehicle_id: str):
+        super().__init__(vehicle_id, ElectricVehicleSpecification())
+
+
+# ==========================================
+# 4. STRUCTURE & ALGORITHMIC ALLOCATION ENGINE
+# ==========================================
+class Floor: 
+    def __init__(self, floor_no: int):
+        self.floor_no = floor_no
+        # Single consolidated min-heap for absolute spatial closeness optimization
+        self.free_spots_heap: List[ParkingSpot] = [] 
+
+    def add_parking_spot(self, parking_spot: ParkingSpot):
+        heapq.heappush(self.free_spots_heap, parking_spot)
+
+
+class ParkingLot: 
+    def __init__(self, floors: List[Floor]):
+        self.floors = floors
+
+    def park_vehicle(self, vehicle: Vehicle):
+        # The allocation engine is now 100% generic code!
+        for floor in self.floors:
+            temporary_retained_spots = []
+            matched_spot = None
+
+            # Scan through the floor's priority heap 
+            while floor.free_spots_heap:
+                spot = heapq.heappop(floor.free_spots_heap)
+
+                if not spot.is_free:
+                    continue  # Stale entry cleanup pass
+
+                # Polymorphic execution via Specification evaluate contract
+                if vehicle.can_fit_in(spot):
+                    matched_spot = spot
+                    break
+                else:
+                    # Valid free spot, but the current vehicle doesn't fit. 
+                    # Hold it safely on the side for a moment.
+                    temporary_retained_spots.append(spot)
+
+            # Re-insert non-matching spots back onto the priority heap
+            for spot in temporary_retained_spots:
+                heapq.heappush(floor.free_spots_heap, spot)
+
+            if matched_spot:
+                matched_spot.is_free = False
+                print(f"[SUCCESS] {vehicle.vehicle_id} assigned to spot {matched_spot.spot_number} on Floor {floor.floor_no}")
+                return f"Ticket ID: {vehicle.vehicle_id} @ {matched_spot.spot_number}"
+
+        print(f"[FAILED] No compliant spatial profile available for vehicle {vehicle.vehicle_id}")
+        return None
+
+
+# ==========================================
+# 5. VERIFICATION RUNNER
+# ==========================================
+if __name__ == "__main__":
+    f1 = Floor(floor_no=1)
+    
+    # Mix of spaces including a new Electric Charging infrastructure spot
+    f1.add_parking_spot(MediumSpot(f1, 101))
+    f1.add_parking_spot(LargeSpot(f1, 102))
+    f1.add_parking_spot(ElectricSpot(f1, 103)) 
+
+    lot = ParkingLot([f1])
+
+    regular_car = Car("CAR-NORMAL")
+    ev_car = ElectricCar("EV-TESLA")
+
+    # The exact same allocation logic processes both seamlessly without internal if/else changes!
+    lot.park_vehicle(ev_car)      # Parks at 103 (ElectricSpot)
+    lot.park_vehicle(regular_car) # Parks at 101 (MediumSpot)
+
+------------------------------------------------------------------------------------
+
+Q5
+
+import threading
+import time
+from typing import List, Dict
+
+# ==========================================
+# CUSTOM EXCEPTIONS
+# ==========================================
+class SeatUnavailableException(Exception): 
+    pass
+
+class SeatNotFoundException(Exception): 
+    pass
+
+
+# ==========================================
+# 1. CORE DOMAIN COMPONENT (Fine-Grained Locking)
+# ==========================================
+class Seat:
+    # State Enum Definitions
+    STATE_AVAILABLE = "AVAILABLE"
+    STATE_LOCKED = "LOCKED"
+    STATE_BOOKED = "BOOKED"
+
+    # Event Enum Definitions
+    EVENT_SELECT_SEAT = "SELECT_SEAT"
+    EVENT_UNSELECT_SEAT = "UNSELECT_SEAT"
+    EVENT_PAYMENT_DONE = "PAYMENT_DONE"
+    EVENT_PAYMENT_CANCEL = "PAYMENT_CANCEL"
+
+    def __init__(self, seat_row: str, seat_no: int):
+        self.seat_row = seat_row
+        self.seat_no = no_str = f"{seat_row}{seat_no}"
+        self.seat_no_int = seat_no
+        self.current_state = self.STATE_AVAILABLE
+        
+        # Fine-grained reentrant lock: Only guards this individual spatial slot
+        self._lock = threading.RLock()
+        
+        # Cart hold validation details (5-second threshold for easy test simulation)
+        self.lock_duration = 5  
+        self.lock_timestamp = None
+
+        # Centralized Table-Driven Transition Matrix
+        # Current State -> { Event Trigger -> Output Target State }
+        self._transition_matrix = {
+            self.STATE_AVAILABLE: {
+                self.EVENT_SELECT_SEAT: self.STATE_LOCKED
+            },
+            self.STATE_LOCKED: {
+                self.EVENT_UNSELECT_SEAT: self.STATE_AVAILABLE,
+                self.EVENT_PAYMENT_DONE: self.STATE_BOOKED
+            },
+            self.STATE_BOOKED: {
+                self.EVENT_PAYMENT_CANCEL: self.STATE_AVAILABLE
+            }
+        }
+
+    def _check_lock_expiration(self):
+        """Internal helper to automatically evict stale checkout holds upon reading."""
+        if self.current_state == self.STATE_LOCKED and self.lock_timestamp:
+            if time.time() - self.lock_timestamp >= self.lock_duration:
+                print(f"[TIMEOUT] Cart allocation expired on seat {self.seat_row}{self.seat_no_int}")
+                self.current_state = self.STATE_AVAILABLE
+                self.lock_timestamp = None
+
+    def handle_event(self, event: str):
+        with self._lock:
+            # Step A: Check if a prior user timed out first
+            self._check_lock_expiration()
+
+            # Step B: Scan matrix to confirm if this event is supported right now
+            allowed_events = self._transition_matrix.get(self.current_state, {})
+            next_state = allowed_events.get(event)
+
+            # Step C: If no entry exists in the table, it's an illegal transition
+            if not next_state:
+                if self.current_state in (self.STATE_LOCKED, self.STATE_BOOKED) and event == self.EVENT_SELECT_SEAT:
+                    raise SeatUnavailableException(
+                        f"Seat {self.seat_row}{self.seat_no_int} is currently unavailable (Status: {self.current_state})."
+                    )
+                print(f"[REJECTED] Action '{event}' is forbidden while seat is '{self.current_state}'.")
+                return
+
+            # Step D: Apply transactional metadata updates
+            if event == self.EVENT_SELECT_SEAT:
+                self.lock_timestamp = time.time()
+            elif event in (self.EVENT_UNSELECT_SEAT, self.EVENT_PAYMENT_DONE):
+                self.lock_timestamp = None
+
+            # Step E: Commit state shift safely within the lock boundary
+            print(f"[MATRIX] Success: {self.current_state} --({event})--> {next_state}")
+            self.current_state = next_state
+
+
+# ==========================================
+# 2. SEAT DATABASE DATA LAYER
+# ==========================================
+class SeatRepository:
+    def __init__(self):
+        self._seats: List[Seat] = []
+    
+    def add_seat(self, seat: Seat):
+        self._seats.append(seat)
+    
+    def get_seat(self, row: str, no: int) -> Seat:
+        for seat in self._seats:
+            if seat.seat_row == row and seat.seat_no_int == no:
+                return seat
+        raise SeatNotFoundException(f"Seat {row}{no} is not present in this theater inventory layout.")
+    
+    def print_seats(self):
+        """Displays the theater matrix grid cleanly without crashes."""
+        formatted_grid = {}
+        for seat in self._seats:
+            formatted_grid.setdefault(seat.seat_row, []).append(seat)
+        
+        print("\n--- Current Cinema Grid Snapshot ---")
+        for row_name, seats_list in sorted(formatted_grid.items()):
+            for seat in sorted(seats_list, key=lambda s: s.seat_no_int):
+                status_char = "-" if seat.current_state == Seat.STATE_AVAILABLE else ("O" if seat.current_state == Seat.STATE_LOCKED else "X")
+                print(f"{seat.seat_row}{seat.seat_no_int}|{status_char}", end="\t")
+            print()
+
+
+# ==========================================
+# 3. HIGH-THROUGHPUT SYSTEM CONTROLLER (Zero Locks)
+# ==========================================
+class BookingEngine:
+    def __init__(self, seat_repo: SeatRepository):
+        self.seat_repo = seat_repo
+        # CRITICAL: No global class lock here. Threads stream past this layer immediately.
+
+    def select_seat(self, row: str, no: int) -> bool:
+        try:
+            seat = self.seat_repo.get_seat(row, no)
+            # Control context delegates straight down to fine-grained resource lock
+            seat.handle_event(Seat.EVENT_SELECT_SEAT)
+            return True
+        except (SeatNotFoundException, SeatUnavailableException) as e:
+            # Clean logging interface preventing system thread death or memory leaks
+            print(f"[DENIED] Thread {threading.get_ident()} failed selection pass: {e}")
+            return False
+
+    def confirm_booking(self, row: str, no: int) -> bool:
+        try:
+            seat = self.seat_repo.get_seat(row, no)
+            seat.handle_event(Seat.EVENT_PAYMENT_DONE)
+            return True
+        except Exception as e:
+            print(f"[DENIED] Payment execution failed: {e}")
+            return False
+
+    def release_seat(self, row: str, no: int):
+        try:
+            seat = self.seat_repo.get_seat(row, no)
+            seat.handle_event(Seat.EVENT_UNSELECT_SEAT)
+        except Exception as e:
+            print(f"[ERROR] Could not release selection: {e}")
+
+
+# ==========================================
+# 4. HIGH-CONCURRENCY STRESS SIMULATION
+# ==========================================
+if __name__ == "__main__":
+    # Setup theater room dataset layout
+    repo = SeatRepository()
+    
+    # Generate popular row seat
+    target_row, target_no = "G", 12
+    repo.add_seat(Seat(target_row, target_no))
+    
+    # Generate secondary surrounding seats to verify structural isolation
+    repo.add_seat(Seat("G", 11))
+    repo.add_seat(Seat("G", 13))
+
+    engine = BookingEngine(repo)
+    
+    # Render starting map context
+    repo.print_seats()
+
+    print("\n--- Initializing Concurrent Swarm Attack on G12 ---")
+    threads = []
+    
+    # Spawn 50 rapid-fire simultaneous execution threads targeting the exact same block
+    for i in range(50):
+        t = threading.Thread(target=engine.select_seat, args=(target_row, target_no))
+        threads.append(t)
+
+    # Launch execution burst at the exact same millisecond
+    for t in threads:
+        t.start()
+
+    # Hold main context thread until transaction burst completely settles
+    for t in threads:
+        t.join()
+
+    # Review current layout state after collision test
+    repo.print_seats()
+
+    print("\n--- Triggering Final Payment Confirmation Pass ---")
+    # Execute purchase check-and-set sequence on our successfully locked resource slot
+    engine.confirm_booking(target_row, target_no)
+
+    # Render terminal metrics visualization
+    repo.print_seats()
+
+------------------------------------------------------------------------------------
+
+Q6
+import threading
+import heapq
+import time
+from abc import ABC
+
+# ==========================================
+# 1. IMMUTABLE DOMAIN ENCAPSULATION
+# ==========================================
+class Order(ABC):
+    def __init__(self, ticker: str, quantity: int, price: float):
+        self.ticker = ticker.upper()
+        self.quantity = quantity
+        self.price = price
+        self.timestamp = time.time()  # Tie-breaker for identical prices (FIFO)
+
+class BuyOrder(Order):
+    # Python heaps are Min-Heaps by default. 
+    # To make a Max-Heap for Buy Orders, we invert the price comparison logic.
+    def __lt__(self, other):
+        if self.price == other.price:
+            return self.timestamp < other.timestamp
+        return self.price > other.price  # Higher price has higher priority
+
+class SellOrder(Order):
+    def __lt__(self, other):
+        if self.price == other.price:
+            return self.timestamp < other.timestamp
+        return self.price < other.price  # Lower price has higher priority
+
+
+# ==========================================
+# 2. SEGMENTED TICKER BOOK (Granular Locking)
+# ==========================================
+class SingleTickerOrderBook:
+    """Manages the heaps and matching sequence for a SINGLE specific stock ticker."""
+    def __init__(self, ticker: str):
+        self.ticker = ticker
+        self.buy_heap = []   # Max-Heap (Highest bids on top)
+        self.sell_heap = []  # Min-Heap (Lowest asks on top)
+        self.lock = threading.Lock() # Guarding ONLY this ticker's book
+
+    def add_order(self, order: Order):
+        with self.lock:
+            if isinstance(order, BuyOrder):
+                heapq.heappush(self.buy_heap, order)
+            elif isinstance(order, SellOrder):
+                heapq.heappush(self.sell_heap, order)
+            
+            # Immediately attempt to cross orders after insertion
+            self._match_orders()
+
+    def _match_orders(self):
+        """Internal execution loop matching best Bids against best Asks."""
+        # O(1) Check: Run while the best buy price >= best sell price
+        while self.buy_heap and self.sell_heap:
+            best_buy = self.buy_heap[0]
+            best_sell = self.sell_heap[0]
+
+            # Price crossing condition check
+            if best_buy.price >= best_sell.price:
+                # Determine how much volume can be cleared atomically
+                match_quantity = min(best_buy.quantity, best_sell.quantity)
+                execution_price = best_sell.price  # Standard market matching rule
+
+                print(f"[TRADE EXECUTION] Ticker: {self.ticker} | Quantity: {match_quantity} @ ${execution_price:.2f}")
+
+                best_buy.quantity -= match_quantity
+                best_sell.quantity -= match_quantity
+
+                # Clean out spent elements from the top of the heaps in O(log N) time
+                if best_buy.quantity == 0:
+                    heapq.heappop(self.buy_heap)
+                if best_sell.quantity == 0:
+                    heapq.heappop(self.sell_heap)
+            else:
+                break # Book is spread apart evenly; no matches possible right now
+
+
+# ==========================================
+# 3. GLOBAL ENGINE CROSS-REFERENCE (O(1) Map)
+# ==========================================
+class MatchingEngine:
+    def __init__(self):
+        self._books: dict[str, SingleTickerOrderBook] = {}
+        self._global_lock = threading.Lock()
+
+    def _get_or_create_book(self, ticker: str) -> SingleTickerOrderBook:
+        """Double-checked locking layout to dynamically initialize books safely."""
+        ticker = ticker.upper()
+        if ticker not in self._books:
+            with self._global_lock:
+                if ticker not in self._books:
+                    self._books[ticker] = SingleTickerOrderBook(ticker)
+        return self._books[ticker]
+
+    def submit_order(self, order: Order):
+        """Asynchronous entry gateway for concurrent worker threads."""
+        book = self._get_or_create_book(order.ticker)
+        book.add_order(order)
+
+
+# ==========================================
+# 4. HIGH-VELOCITY ASYNCHRONOUS TEST RUNNER
+# ==========================================
+if __name__ == "__main__":
+    engine = MatchingEngine()
+
+    def simulated_market_maker_alpha():
+        # Injecting Sell inventory
+        for i in range(5):
+            engine.submit_order(SellOrder("GOOG", quantity=10, price=100.0 + i))
+            time.sleep(0.01)
+
+    def simulated_retail_buyer_beta():
+        # Injecting Aggressive Buy Orders
+        for i in range(5):
+            engine.submit_order(BuyOrder("GOOG", quantity=10, price=102.0 - i))
+            time.sleep(0.01)
+
+    print("--- Activating Trading Background Workers ---")
+    thread_producer = threading.Thread(target=simulated_market_maker_alpha)
+    thread_consumer = threading.Thread(target=simulated_retail_buyer_beta)
+
+    thread_producer.start()
+    thread_consumer.start()
+
+    thread_producer.join()
+    thread_consumer.join()
+    print("--- Order Streams Settled Seamlessly ---")

@@ -41,7 +41,7 @@ This exam evaluates your ability to translate abstract requirements into clean, 
   * **The Rules:** If a user calls `insert_money()` while the machine is in `DispensingState`, it must raise an exception or reject it. If they click `cancel_transaction()` while in `HasMoneyState`, the machine must return their change and transition back to `IdleState`.
 * **Task:** Implement this entire behavioral infrastructure utilizing the **State Pattern** without using a single nested `if/else` block to check the machine's state variable. **Ensure thread safety during product allocation.**
 
-### Question 4: The Multi-Level Parking Lot System
+### Question 4: The Multi-Level Parking Lot System(done)
 * **Scenario:** Design a backend for a commercial `ParkingLot`.
 * **Requirements:**
   * The parking lot contains multiple `Floor` objects. Each floor contains a specific allocation of `ParkingSpot` layouts: `Compact` (for Motorcycles), `Medium` (for Cars), and `Large` (for Trucks).
