@@ -13,5 +13,5 @@
 | --- | --- | --- | --- |
 | **MVC (Model-View-Controller)** | Server-Rendered Task Manager | Build a system where a Controller captures input, modifies a Model, and injects data directly into a static View template. | ✅ **Done** |
 | **MVP (Model-View-Presenter)** | Strict Desktop/Mobile Input Form | Build a system where the View is completely passive. The Presenter manually extracts data from the View and pushes it to the Model using strict two-way interfaces. | ✅ **Done** |
-| **MVVM (Model-View-ViewModel)** | Reactive Live-Search Dashboard | Build a modern frontend engine utilizing **Data Binding**. When a state variable shifts in the ViewModel, the View UI elements automatically re-render without manual intervention. | ⏳ **Queued** |
-| **MVI (Model-View-Intent)** | Unidirectional State Counter | Build a reactive system using single-directional data flow. User actions generate an "Intent", which updates a single immutable "State" object that gets pushed back to the View. | ⏳ **Queued** |
+| **MVVM (Model-View-ViewModel)** | Reactive Live-Search Dashboard | Build a modern frontend engine utilizing **Data Binding**. When a state variable shifts in the ViewModel, the View UI elements automatically re-render without manual intervention. | ✅ **Done** |
+| **MVI (Model-View-Intent)** | Unidirectional State Counter | Build a reactive system using single-directional data flow. User actions generate an "Intent", which updates a single immutable "State" object that gets pushed back to the View. | ✅ **Done** |
