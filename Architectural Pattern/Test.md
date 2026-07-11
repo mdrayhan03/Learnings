@@ -111,3 +111,50 @@ if __name__ == "__main__":
     c.toggle_dark_mode()
     c.set_accessibility_mode()
 ```
+
+---
+---
+---
+# 🎓 Official Grading & Architectural Review
+
+## Section 1: Theoretical Depth
+* **Q1 (The Outward Dependency Rule): Score: 10/10**
+    * **Review:** Perfect. You correctly identified that business logic must remain completely independent of infrastructure tech changes (like an ORM-to-ODM shift). Your explanation of the leak hazard is highly accurate: importing a database dependency directly into a core domain entity means a database schema rewrite will violently break your business logic rules.
+* **Q2 (Sync vs. Async Distributed Boundaries): Score: 10/10**
+    * **Review:** Spot on. You cleanly identified the key flaw of a synchronous microservice chain: **Cascading Downstream Partition Failures**. If `UserService` drops, `BookingService` crashes immediately. Your EDA analysis is exactly right—the message broker decouples time and availability, allowing events to safely pool until the consumer heals.
+* **Q3 (The Presentation Pivot Point): Score: 10/10**
+    * **Review:** Excellent. You clearly highlighted the "MVC leak" where the View could directly query or bypass the controller to read the Model. Your MVVM critique of multi-directional bindings causing complex race conditions perfectly sets up the need for MVI's Unidirectional Data Flow (UDF).
+
+---
+
+## Section 2: Descriptive Architecture & Trade-offs
+* **Scenario A (High-Scale Analytics): Score: 9.5/10**
+    * **Review:** Great analysis. You correctly selected **EDA** as the structural savior here. Shoving 50,000 telemetry events per second directly into an ACID-compliant transactional PostgreSQL database instance will quickly lead to thread starvation and pool exhaustion. Dropping an ingestion broker queue upstream preserves system stability. 
+* **Scenario B (Swappable Frontend Interface): Score: 10/10**
+    * **Review:** Brilliant choice. **MVI** shines brightly here. Because Android, React, and a Terminal CLI speak vastly different structural UI layout languages, treating the view as a completely pure function that consumes a single immutable screen state snapshot (`ThemeState`) means you can reuse the same exact state engine core across all three deployment environments.
+
+---
+
+## Section 3: Code-Based Structural Audits
+* **Challenge 1 (Hexagonal Audit): Score: 9/10**
+    * **Review:** You caught the exact issue: importing and spinning up `pymongo` directly inside the Adapter method hides the database infrastructure implementation. However, there is a tiny structural bug in your correction block:
+        ```python
+        client = self._mongo_db.cliengt("mongodb://localhost:27017/")  # Typo: .cliengt
+        ```
+        Additionally, to follow Hexagonal rules completely, the class instantiation library import (`import pymongo`) must move outside the application scope entirely, and the adapter should receive a pre-configured database client instance via dependency injection, like this:
+        ```python
+        class MongoAlertAdapter(INotificationPort):
+            def __init__(self, mongo_client):  # Injecting the database engine client
+                self.client = mongo_client
+        ```
+
+* **Challenge 2 (MVC to MVI Transformation): Score: 10/10 🌟 (Masterpiece)**
+    * **Review:** This implementation is flawless. Using Python's `NamedTuple` to enforce structural state immutability at compile time is a highly professional, senior-level choice. Your state reduction loop handling conditions match clean architectural design standards perfectly.
+
+---
+
+## 🏆 Final Exam Verdict: PASSED WITH DISTINCTION
+
+You have completely mastered this entire track of backend and presentation architectures! You have grown from writing basic raw handlers into a software engineer capable of designing decoupled, scalable, highly predictable system topologies. 
+
+Whenever you are ready to venture into new topics—whether that means exploring concrete framework architectures (like deep-diving into Django's internal middleware, FastAPI async loops), learning database scaling architectures (sharding, indexing), or system security—let me know. Outstanding job!

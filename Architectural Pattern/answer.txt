@@ -1,0 +1,126 @@
+# Section 1
+Q1 -> ans: in clean or onion architecture database placed on the absolute outermost layer, because database can be change or we can shift orm to odm etc but it shouldn't effect the business logic like the core layer and other features or 2nd core layer that's why these placed in the outermost layer.
+The  catastropihc problem occurs if an entity class in the core domain imports a database model class if the database change then the model code or type will be change and I will break the core business logic and app can goes down.
+
+Q2 -> ans: 
+- if in microservice, if UserService goes down completely then BookingService try to connect with UserService and can't get UserService then task will fail and lost totally.
+
+- in EDA, if the EmailNotificationService crashes now problem we are using a queue to capture the events so from OrderService task comes and store in queue and if EmailNotificationService available the get the task from queue and complete the task if not available then task will store in the queue so OrderService task never disappear/lost.
+
+Q3 -> ans: 
+- in classic MVC View can sometime read data from Model and that shouldn't be. So in the MVP View become totally isolated and no business logic write here.
+
+- in MVI data can flow only one single way or cycle circle, where undirectional data flow (UDF), but in the MVVM when many data flow comes than that's become very hard to debug and face race condition.
+
+# Section 2
+SA -> ans: 
+- N-Tier: if we want to stay in the N-Tier my existing architecture here we can add an outer layer for capture event, it like when a client request come it first collect to the Event capture layer then send to the inner layer like our core business logic layer. 
+- CQRS: if we use CQRS we can create a new model for Event capture and we can use the write(command) asynchronously with per request.
+- EDA: EDA here is the best choice, we can create a service for Event capture and when the request come we send in the event capture service queue and in the main service queue this write data asynchronously without touching the core system and if event capture service down still it won't break the entire system.
+
+SB -> ans: for this solution we need to use MVI(Model View Intent). because we have three different type of frontend interaction with the backend that means many different type of request but the core logic is same, so MVI will help with it's udf and can handle asynchronously and the view layer never ever know anything about the model layer.
+
+# Section 3
+C1 -> ans: in the class MongoAlertAdapter we are using hardcoded database connection it makes the class coupled strictly with the only pymongo client. database should be the most outer layer.
+
+class MongoDatabase :
+    def __init__(self, connection_str: str) :
+        self.connection_str: str = connection_str
+
+class MongoAlertAdapter(INotificationPort):
+    def __init__(self, mongo_db: MongoDatabase) :
+        self._mongo_db: MongoDatabase = mongo_db
+        
+    def send(self, user_id: int, message: str) -> None:
+        client = self._mongo_db.cliengt("mongodb://localhost:27017/")
+        db = client["system_logs"]
+        db["alerts"].insert_one({"user": user_id, "msg": message})
+        print(f"[Adapter] Logged notification to MongoDB alert collection.")
+
+C2 -> ans: 
+from typing import NamedTuple
+
+# =====================================================================
+# 1. IMMUTABLE STATE
+# =====================================================================
+# Using NamedTuple ensures the state properties cannot be edited in-place.
+# To change state, we MUST create a brand-new snapshot.
+class ThemeState(NamedTuple):
+    mode: str  # "LIGHT", "DARK", or "HIGH_CONTRAST"
+
+
+# =====================================================================
+# 2. INTENTS (The Actions Framework)
+# =====================================================================
+class ThemeIntent:
+    """Base class for all user intentions."""
+    pass
+
+class ToggleDarkModeIntent(ThemeIntent):
+    """Represents a user wanting to switch between light and dark modes."""
+    pass
+
+class SetAccessibilityModeIntent(ThemeIntent):
+    """Represents a user wanting to enforce high contrast."""
+    pass
+
+
+# =====================================================================
+# 3. MODEL / CENTRALIZED STORE DISPATCHER
+# =====================================================================
+class ThemeStore:
+    def __init__(self, initial_state: ThemeState, view: 'ThemeView'):
+        self._state = initial_state
+        self._view = view
+        
+        # Render the initial setup immediately
+        self._view.render(self._state)
+
+    def dispatch(self, intent: ThemeIntent) -> None:
+        """The single centralized state processing dispatcher."""
+        print(f"\n[STORE] Action Intercepted: processing {type(intent).__name__}...")
+        
+        # Pure reducer-like logic: (Current State + Intent) -> New State
+        if isinstance(intent, ToggleDarkModeIntent):
+            new_mode = "DARK" if self._state.mode == "LIGHT" else "LIGHT"
+            self._state = ThemeState(mode=new_mode)
+            
+        elif isinstance(intent, SetAccessibilityModeIntent):
+            self._state = ThemeState(mode="HIGH_CONTRAST")
+            
+        # Unidirectional flow: Push the new immutable snapshot to the view layer
+        self._view.render(self._state)
+
+
+# =====================================================================
+# 4. VIEW (Renders Pure State Snapshots)
+# =====================================================================
+class ThemeView:
+    def render(self, state: ThemeState) -> None:
+        """Takes a pure, read-only snapshot of state and draws it."""
+        print(f"--- [SCREEN DISPLAY] Rendering UI with {state.mode} background theme ---")
+
+
+# =====================================================================
+# MVI FLOW EXECUTION SIMULATION
+# =====================================================================
+if __name__ == "__main__":
+    print("--- Initializing MVI Architecture Cycle ---")
+    
+    # Initialize components
+    view = ThemeView()
+    starting_state = ThemeState(mode="LIGHT")
+    
+    # Store coordinates state transitions exclusively
+    store = ThemeStore(initial_state=starting_state, view=view)
+
+    print("\n--- Simulating User Inputs (Intents) ---")
+
+    # User action 1: Toggle theme
+    store.dispatch(ToggleDarkModeIntent())
+
+    # User action 2: Enforce high contrast
+    store.dispatch(SetAccessibilityModeIntent())
+
+    # User action 3: Toggle again (should bounce out of high contrast back into standard logic)
+    store.dispatch(ToggleDarkModeIntent())

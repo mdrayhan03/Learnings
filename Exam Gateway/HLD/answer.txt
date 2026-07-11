@@ -1,0 +1,433 @@
+# Plan
+We are going to use clean onion monolithic architecture
+```
+1st Ring (Domain): 
+   └── Rider (Entity), Ride (Entity), FareCalculator (Domain Service)
+
+2nd Ring (Application Core & Ports):
+   ├── RideBookUseCase (Coordinator)
+   ├── IUserRepository, IRideRepository (Outbound Ports)
+   ├── IEventDispatcher (Outbound Port)
+   └── RideBookingDTOs (Boundary Structures)
+
+3rd Ring (Adapters & Infrastructure):
+   ├── MongoDBUserRepository, MongoDBRideRepository (Adapters)
+   ├── ConsoleEventDispatcher (Adapter)
+   └── FastAPI / RideController (Inbound Driving Adapter)
+```
+
+## 1st Ring
+# filename: domain/models.py
+from abc import ABC
+from typing import Dict
+
+# ==========================================
+# CUSTOM DOMAIN EXCEPTIONS
+# ==========================================
+class RiderNotFoundException(Exception): pass
+class RiderNotActiveException(Exception): pass
+class ServiceTierNotFoundException(Exception): pass
+class RiderNotEnoughBalanceException(Exception): pass
+
+
+# ==========================================
+# VALUE OBJECTS & STRATEGIES (Pure Python)
+# ==========================================
+class IServiceTier(ABC):
+    def __init__(self, service_name: str, base_fare: float, per_unit_rate: float):
+        self.service_name = service_name
+        self.base_fare = base_fare
+        self.per_unit_rate = per_unit_rate
+
+class StandardServiceTier(IServiceTier):
+    def __init__(self):
+        super().__init__(service_name="STANDARD", base_fare=5.0, per_unit_rate=1.5)
+
+class PremiumServiceTier(IServiceTier):
+    def __init__(self):
+        super().__init__(service_name="PREMIUM", base_fare=12.0, per_unit_rate=3.0)
+
+class VipServiceTier(IServiceTier):
+    def __init__(self):
+        super().__init__(service_name="VIP", base_fare=25.0, per_unit_rate=6.5)
+
+
+# ==========================================
+# PURE DOMAIN ENTITIES (Standard __init__)
+# ==========================================
+class Rider:
+    def __init__(self, rider_id: str, rider_name: str, wallet_balance: float, account_status: str):
+        self.rider_id = rider_id
+        self.rider_name = rider_name
+        self.wallet_balance = wallet_balance
+        self.account_status = account_status
+
+    def validate_eligibility_for_fare(self, fare: float) -> None:
+        if self.account_status != "ACTIVE":
+            raise RiderNotActiveException("Rider account is suspended")
+        if self.wallet_balance < fare:
+            raise RiderNotEnoughBalanceException("Insufficient wallet funds for this trip allocation")
+
+    def debit_balance(self, amount: float) -> None:
+        self.wallet_balance -= amount
+
+
+class Ride:
+    def __init__(self, ride_id: str, rider_id: str, pickup: Dict[str, float], drop: Dict[str, float], fare: float, status: str, created_at: float):
+        self.ride_id = ride_id
+        self.rider_id = rider_id
+        self.pickup = pickup
+        self.drop = drop
+        self.fare = fare
+        self.status = status
+        self.created_at = created_at
+
+
+# ==========================================
+# DOMAIN SERVICES
+# ==========================================
+class DistanceCalculator:
+    @staticmethod
+    def calculate_distance(pickup: Dict[str, float], drop: Dict[str, float]) -> float:
+        return abs(drop.get("lat", 0.0) - pickup.get("lat", 0.0)) + abs(drop.get("lng", 0.0) - pickup.get("lng", 0.0))
+
+
+class FareCalculator:
+    @staticmethod
+    def calculate_fare(service_tier: IServiceTier, distance: float) -> float:
+        return service_tier.base_fare + (distance * service_tier.per_unit_rate)
+
+
+## 2nd Ring
+# filename: use_cases/ride_booking.py
+from abc import ABC, abstractmethod
+from typing import Dict, Any, List
+import time
+
+# Import your entities from your 1st ring
+# from domain.models import (
+#     Rider, Ride, DistanceCalculator, FareCalculator,
+#     StandardServiceTier, PremiumServiceTier, VipServiceTier,
+#     ServiceTierNotFoundException, RiderNotFoundException
+# )
+
+# ==========================================
+# OUTBOUND (DRIVEN) PORTS
+# ==========================================
+class IRiderRepository(ABC):
+    @abstractmethod
+    def get_rider_by_id(self, rider_id: str) -> Rider: pass
+
+    @abstractmethod
+    def update_rider_balance(self, rider: Rider) -> None: pass
+
+
+class IRideRepository(ABC):
+    @abstractmethod
+    def save_ride(self, ride: Ride) -> None: pass
+
+
+class IEventDispatcher(ABC):
+    @abstractmethod
+    def publish(self, event_name: str, payload: Dict[str, Any]) -> None: pass
+
+# ==========================================
+# BOUNDRY STRUCTURES
+# ==========================================
+class RideBookingRequestDTO:
+    def __init__(self, rider_id: str, pickup_lat: float, pickup_lng: float, drop_lat: float, drop_lng: float, tier: str):
+        self.rider_id = rider_id
+        self.pickup = {"lat": pickup_lat, "lng": pickup_lng}
+        self.drop = {"lat": drop_lat, "lng": drop_lng}
+        self.tier = tier.upper()
+
+class RideBookingResponseDTO:
+    def __init__(self, success: bool, ride_id: str, debited_amount: float, current_status: str):
+        self.success = success
+        self.ride_id = ride_id
+        self.debited_amount = debited_amount
+        self.current_status = current_status
+
+# ==========================================
+# INBOUND (DRIVING) USE CASE / APPLICATION LAYER
+# ==========================================
+class RideBookUseCase:
+    def __init__(self, rider_repo: IRiderRepository, ride_repo: IRideRepository, event_dispatcher: IEventDispatcher):
+        self._rider_repo = rider_repo
+        self._ride_repo = ride_repo
+        self._event_dispatcher = event_dispatcher
+
+    def _resolve_service_tier(self, tier_str: str):
+        """Helper strategy resolver."""
+        tiers = {
+            "STANDARD": StandardServiceTier(),
+            "PREMIUM": PremiumServiceTier(),
+            "VIP": VipServiceTier()
+        }
+        if tier_str not in tiers:
+            raise ServiceTierNotFoundException("Invalid service tier selection")
+        return tiers[tier_str]
+
+    def execute(self, request_dto: RideBookingRequestDTO) -> RideBookingResponseDTO:
+        # 1. Fetch domain entity through the outbound port boundary
+        rider = self._rider_repo.get_rider_by_id(request_dto.rider_id)
+        if not rider:
+            raise RiderNotFoundException("Rider account not found")
+
+        # 2. Resolve pricing strategy configuration 
+        service_tier = self._resolve_service_tier(request_dto.tier)
+
+        # 3. Apply Domain Services calculations
+        distance = DistanceCalculator.calculate_distance(request_dto.pickup, request_dto.drop)
+        calculated_fare = FareCalculator.calculate_fare(service_tier, distance)
+
+        # 4. Enforce entity invariants mutations (Business validations)
+        rider.validate_eligibility_for_fare(calculated_fare)
+        rider.debit_balance(calculated_fare)
+
+        # 5. Formulate a new transaction domain asset
+        ride_id = f"RIDE-{int(time.time())}"
+        new_ride = Ride(
+            ride_id=ride_id,
+            rider_id=rider.rider_id,
+            pickup=request_dto.pickup,
+            drop=request_dto.drop,
+            fare=calculated_fare,
+            status="MATCHING_DRIVER",
+            created_at=time.time()
+        )
+
+        # 6. Push structural state changes out through DB Ports
+        self._ride_repo.save_ride(new_ride)
+        self._rider_repo.update_rider_balance(rider)
+
+        # 7. Broadcast external low-level event out through messaging port
+        self._event_dispatcher.publish("RIDE_CREATED", {"ride_id": ride_id, "fare": calculated_fare})
+
+        # 8. Envelope output cleanly inside a pure Response DTO
+        return RideBookingResponseDTO(
+            success=True,
+            ride_id=ride_id,
+            debited_amount=calculated_fare,
+            current_status=new_ride.status
+        )
+
+## 3rd Ring
+class MockMongoCollection:
+    def __init__(self, data):
+        self._data = data
+    def find_one(self, query):
+        return self._data.get(query.get("_id"))
+    def update_one(self, query, update_op):
+        doc = self._data.get(query.get("_id"))
+        if doc:
+            doc["wallet_balance"] = update_op["$set"]["wallet_balance"]
+    def insert_one(self, document):
+        self._data[document["_id"]] = document
+
+class MockMongoClient:
+    def __init__(self):
+        # Seed an initial active rider account for our test runner verification
+        self.storage = {
+            "ride_buddy_prod": {
+                "users": {
+                    "USER-777": {"_id": "USER-777", "name": "John Doe", "wallet_balance": 100.0, "account_status": "ACTIVE"}
+                },
+                "rides": {}
+            }
+        }
+    def __getitem__(self, db_name):
+        return {coll_name: MockMongoCollection(self.storage[db_name][coll_name]) for coll_name in ["users", "rides"]}
+
+class MongoDBRiderRepository(IRiderRepository):
+    def __init__(self, db_client: MockMongoClient):
+        # Concrete collection dependencies are injected cleanly here
+        self._collection = db_client["ride_buddy_prod"]["users"]
+
+    def get_rider_by_id(self, rider_id: str) -> Rider:
+        doc = self._collection.find_one({"_id": rider_id})
+        if not doc:
+            raise RiderNotFoundException(f"Rider {rider_id} not found in database records.")
+        
+        # Translate infrastructure dict primitives into a clean domain entity shape
+        return Rider(
+            rider_id=doc["_id"],
+            rider_name=doc.get("name", "Unknown"),
+            wallet_balance=float(doc.get("wallet_balance", 0.0)),
+            account_status=doc.get("account_status", "INACTIVE")
+        )
+
+    def update_rider_balance(self, rider: Rider) -> None:
+        self._collection.update_one(
+            {"_id": rider.rider_id},
+            {"$set": {"wallet_balance": rider.wallet_balance}}
+        )
+
+
+class MongoDBRideRepository(IRideRepository):
+    def __init__(self, db_client: MockMongoClient):
+        self._collection = db_client["ride_buddy_prod"]["rides"]
+
+    def save_ride(self, ride: Ride) -> None:
+        # Flatten domain entity back down to primitive storage dictionary formats
+        ride_document = {
+            "_id": ride.ride_id,
+            "rider_id": ride.rider_id,
+            "pickup": ride.pickup,
+            "drop": ride.drop,
+            "fare": ride.fare,
+            "status": ride.status,
+            "created_at": ride.created_at
+        }
+        self._collection.insert_one(ride_document)
+
+class ConsoleEventDispatcher(IEventDispatcher):
+    def publish(self, event_name: str, payload: Dict[str, Any]) -> None:
+        print(f"[METRICS SYSTEM LOG] Broadcasted Event '{event_name}' with payload data: {payload}")
+
+## 4th ring
+import json
+
+class RideController:
+    def __init__(self, ride_book_usecase: RideBookUseCase):
+        self.ride_book_usecase = ride_book_usecase
+
+    def post_book_request(self, payload: dict) -> str:
+        if payload.get("path") != "/ride_book":
+            return json.dumps({"status": "404 Not Found", "error": "Invalid endpoint"}, indent=2)
+
+        try:
+            # Correct mapping lookup from inbound parameters frame
+            body = payload.get("body", {})
+            
+            # Map primitives to use-case boundary Request DTO package
+            request_dto = RideBookingRequestDTO(
+                rider_id=body.get("rider_id"),
+                pickup_lat=float(body.get("pickup_lat", 0.0)),
+                pickup_lng=float(body.get("pickup_lng", 0.0)),
+                drop_lat=float(body.get("drop_lat", 0.0)),
+                drop_lng=float(body.get("drop_lng", 0.0)),
+                tier=body.get("tier", "STANDARD")
+            )
+
+            # Atomic polymorphic orchestration step
+            response_dto: RideBookingResponseDTO = self.ride_book_usecase.execute(request_dto)
+
+            # Wrap response DTO output back up in standard client output schemas
+            return json.dumps({
+                "status": "200 OK",
+                "data": {
+                    "success": response_dto.success,
+                    "ride_id": response_dto.ride_id,
+                    "debited_amount": response_dto.debited_amount,
+                    "current_status": response_dto.current_status
+                }
+            }, indent=2)
+
+        except RiderNotFoundException as e: 
+            return json.dumps({"status": "404 Not Found", "message": str(e)}, indent=2)
+        except (RiderNotActiveException, ServiceTierNotFoundException) as e: 
+            return json.dumps({"status": "400 Bad Request", "message": str(e)}, indent=2)
+        except RiderNotEnoughBalanceException as e: 
+            return json.dumps({"status": "402 Payment Required", "message": str(e)}, indent=2)
+        except Exception as e:
+            return json.dumps({"status": "500 Internal Error", "message": f"Unexpected breakdown: {str(e)}"}, indent=2)
+
+
+if __name__ == "__main__":
+    # 1. Initialize Infrastructure Clients (Using Mock for execution)
+    mock_client = MockMongoClient()
+
+    # 2. Wire up the Outbound Adapters
+    rider_repo = MongoDBRiderRepository(mock_client)
+    ride_repo = MongoDBRideRepository(mock_client)
+    event_dispatcher = ConsoleEventDispatcher()
+
+    # 3. Inject Adapters into the Core Use Case Coordinator
+    use_case = RideBookUseCase(rider_repo, ride_repo, event_dispatcher)
+
+    # 4. Inject Use Case into the Inbound Controller
+    controller = RideController(use_case)
+
+    # 5. Simulate an incoming network payload packet
+    mock_request_payload = {
+        "path": "/ride_book",
+        "body": {
+            "rider_id": "USER-777",
+            "pickup_lat": 40.7128,
+            "pickup_lng": -74.0060,
+            "drop_lat": 40.7306,
+            "drop_lng": -73.9352,
+            "tier": "PREMIUM"
+        }
+    }
+
+    print("--- Executing Script via RideController ---")
+    json_response = controller.post_book_request(mock_request_payload)
+    print(json_response)
+
+# filename: main_fastapi.py
+import uvicorn
+from fastapi import FastAPI, HTTPException, status
+from pydantic import BaseModel
+
+# 1. Initialize the HTTP Engine Adapter
+app = FastAPI(title="Hexagonal Ride Platform Allocation Core")
+
+# 2. Composition Root: Wire structural layers manually on startup
+mock_client = MockMongoClient()
+rider_repo = MongoDBRiderRepository(mock_client)
+ride_repo = MongoDBRideRepository(mock_client)
+event_dispatcher = ConsoleEventDispatcher()
+use_case = RideBookUseCase(rider_repo, ride_repo, event_dispatcher)
+
+
+# 3. HTTP Input Validation Contract (Belongs to Inbound Layer)
+class RideRequestPayload(BaseModel):
+    rider_id: str
+    pickup_lat: float
+    pickup_lng: float
+    drop_lat: float
+    drop_lng: float
+    tier: str
+
+
+# 4. Inbound Endpoint Gateway Adapter Route
+@app.post("/api/v1/rides/book")
+def book_ride_endpoint(payload: RideRequestPayload):
+    try:
+        # Translate frame values into an application-safe Request DTO envelope
+        request_dto = RideBookingRequestDTO(
+            rider_id=payload.rider_id,
+            pickup_lat=payload.pickup_lat,
+            pickup_lng=payload.pickup_lng,
+            drop_lat=payload.drop_lat,
+            drop_lng=payload.drop_lng,
+            tier=payload.tier
+        )
+
+        # Dispatch execution task polymorphically down to core ring layer
+        response_dto = use_case.execute(request_dto)
+
+        # Return standard dictionary frame for web serialization mapping
+        return {
+            "success": response_dto.success,
+            "ride_id": response_dto.ride_id,
+            "debited_amount": response_dto.debited_amount,
+            "current_status": response_dto.current_status
+        }
+
+    # Catch pure custom domain boundaries models exceptions to yield HTTP states
+    except RiderNotFoundException as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except (RiderNotActiveException, ServiceTierNotFoundException) as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except RiderNotEnoughBalanceException as e:
+        raise HTTPException(status_code=status.HTTP_402_PAYMENT_REQUIRED, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Unexpected engine fault.")
+
+
+if __name__ == "__main__":
+    print("--- Booting Web Application Infrastructure Layer via Uvicorn ---")
+    uvicorn.run(app, host="127.0.0.1", port=8000)

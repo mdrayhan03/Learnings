@@ -79,41 +79,68 @@ Welcome to your engineering track. This roadmap is designed to take you from wri
 ---
 
 ## 🌐 Phase 3: Traffic & Data Architect (Distributed System Design)
-*Focus: Scaling code out horizontally across networks, regions, and handling high-concurrency traffic.*
-* **Timeline:** Weeks 17–24
-
-### 1. Network Communications & API Infrastructure
-* **Network Protocols:** HTTP/1.1 vs. HTTP/2 multiplexing, HTTP/3 (QUIC/UDP transport), WebSockets (persistent duplex channels), and gRPC (HTTP/2 binary serialization with Protocol Buffers).
-* **API Design Topologies:** RESTful conventions, GraphQL composition, and Webhook dispatching.
-
-### 2. Traffic Control: Proxies, Gateways & Load Balancing
-* **Proxies:** Forward Proxies (client egress security) vs. Reverse Proxies (Nginx, Envoy for SSL termination, request routing, and backend masking).
-* **API Gateways:** Centralizing global cross-cutting concerns (Rate limiting, authentication tokens, global log aggregation).
-* **Load Balancing Mechanics:**
-    * OSI Layer 4 (Transport/TCP routing) vs. Layer 7 (Application/HTTP content-aware smart routing).
-    * Routing Algorithms: Round Robin, Least Connections, Least Response Time, IP Hashing, and **Consistent Hashing** (slot ring mapping for scalable stateful storage).
-
-### 3. Distributed Caching Systems
-* **Caching Strategies:** Cache-Aside (Lazy loading), Write-Through, Write-Behind (Write-Back asynchronous batching), and Refresh-Ahead.
-* **Eviction Protocols:** LRU (Least Recently Used), LFU (Least Frequently Used), FIFO caches.
-* **Topologies:** In-memory local caches vs. Distributed Caching Clusters (Redis, Memcached architectures).
-
-### 4. Distributed Storage & Database Systems
-* **Data Modeling Paradigms:** Relational/SQL vs. NoSQL (Key-Value, Document, Wide-Column, Graph data storage structures).
-* **Horizontal Scalability:** Master-Slave Read Replication vs. Database Sharding (Horizontal Partitioning strategies based on shard keys).
-* **Distributed Systems Theorems:**
-    * **CAP Theorem:** Navigation of Consistency, Availability, and Partition Tolerance during network splits.
-    * **PACELC Theorem:** Balance of Latency vs. Consistency when the network is running perfectly.
-* **Distributed State Consensus:** Master election, data replication, Raft, Paxos, and Gossip protocols.
-
-### 🎯 EXAM GATEWAY 3: System Design Capstone Exam
-
-- **Task:** Whiteboard and document a global, highly available architecture for a platform like Uber, Netflix, or Twitter.
-
-- **Criteria:** Handle 1,000,000+ requests per second, calculate storage requirements, explain failover paths under network splits.
+**Focus:** Scaling code out horizontally across networks and regions, managing data consensus, and engineering high-availability, fault-tolerant topologies under high concurrency.
+**Timeline:** Weeks 17–24
 
 ---
 
+### 1. Network Communications & API Infrastructure
+* **Network Protocols:** * HTTP/1.1 head-of-line blocking vs. HTTP/2 multiplexing.
+  * HTTP/3 (QUIC transport over UDP) connection migration and zero round-trip time (0-RTT) handshakes.
+  * WebSockets (persistent full-duplex TCP channels) vs. Server-Sent Events (SSE) for unidirectional streaming.
+  * gRPC (HTTP/2 binary serialization with Protocol Buffers, unary vs. streaming patterns).
+* **API Design Topologies:** RESTful standards, GraphQL composition (Resolvers, N+1 query problem, schema federation), and Webhook dispatching with retry queues.
+
+---
+
+### 2. Traffic Control: Proxies, Gateways & Load Balancing
+* **Proxies:** Forward Proxies (client egress control) vs. Reverse Proxies (Nginx, Envoy for SSL/TLS termination, request routing, compression, and backend masking).
+* **API Gateways:** Centralizing global cross-cutting concerns (JWT validation, API keys, request/response transformations, metrics collection, and global log aggregation).
+* **Load Balancing Mechanics:**
+  * **OSI Layer 4** (Transport/TCP routing via IP/Port swapping) vs. **Layer 7** (Application/HTTP content-aware smart routing based on headers, cookies, or URL paths).
+  * **Routing Algorithms:** Round Robin, Least Connections, Least Response Time, and IP Hashing.
+  * **Consistent Hashing:** Virtual nodes, slot ring mapping, minimizing data migration during server churn, and hotspot mitigation in stateful caching storage clusters.
+
+---
+
+### 3. Distributed Caching Systems
+* **Caching Strategies:** Cache-Aside (Lazy loading), Write-Through, Write-Behind/Write-Back (asynchronous batching hazards), and Refresh-Ahead.
+* **Eviction Protocols:** LRU (Least Recently Used), LFU (Least Frequently Used), FIFO, and Segmented LRU.
+* **Topologies:** In-memory local caches vs. Distributed Caching Clusters (Redis, Memcached architectures). Redis Sentinel (High Availability) vs. Redis Cluster (Horizontal Sharding).
+* **CRITICAL ADDITION: Caching Hazards & Mitigations:**
+  * **Cache Penetration:** Querying keys that never exist in DB (Mitigation: Bloom Filters, caching null values).
+  * **Cache Breakdown (Stampede):** Hot key expires under heavy load (Mitigation: Mutex locking, pre-computation).
+  * **Cache Avalanche:** Mass expiration of keys simultaneously (Mitigation: Jitter/Randomized expiration times).
+
+---
+
+### 4. Distributed Storage & Database Systems
+* **Data Modeling Paradigms:** Relational/SQL vs. NoSQL (Key-Value, Document, Wide-Column, Graph structures). Choosing based on read/write patterns and structural requirements.
+* **Horizontal Scalability:** Master-Slave Read Replication (handling replication lag) vs. Database Sharding (Horizontal Partitioning, selecting shard keys, handling hot shards, cross-shard joins).
+* **Distributed Systems Theorems:**
+  * **CAP Theorem:** Deep dive into navigating Consistency vs. Availability during network splits.
+  * **PACELC Theorem:** Trade-offs between Latency vs. Consistency when the network is running perfectly (`If Partition, choose Availability or Consistency; Else, choose Latency or Consistency`).
+* **Distributed State Consistency & Consensus:**
+  * Strong vs. Eventual Consistency, Monotonic Reads, Read-Your-Own-Writes.
+  * **Consensus Engines:** Master election and log replication via Raft and Paxos.
+  * **Peer-to-Peer:** Gossip protocols (cluster membership and cluster discovery).
+
+---
+
+### 5. Resilience, Isolation & Traffic Regulation (CRITICAL ADDITION)
+* **Rate Limiting Algorithms:** Token Bucket, Leaky Bucket, Fixed Window Counter, and Sliding Window Log/Counter. Distributed rate-limiting bottlenecks using central Redis nodes.
+* **Fault Isolation:**
+  * **Bulkhead Pattern:** Isolating resource pools (thread pools, connections) so one failing service module doesn't starve the entire host machine.
+  * **Circuit Breaker Pattern:** Transitions between Open, Closed, and Half-Open states to gracefully degrade application paths under stress.
+  * **Retries & Backoff:** Implementing Exponential Backoff with randomized **Jitter** to prevent self-inflicted Thundering Herd problems on recovering downstream databases.
+
+---
+
+## 🎯 EXAM GATEWAY 3: System Design Capstone Exam
+* **Task:** Whiteboard and document a global, highly available distributed architecture for a platform like **Uber** (geospatial/quadtree indexing), **Netflix** (video transcoding, storage layout, edge CDNs), or **Twitter/X** (fan-out timelines, hybrid push/pull systems).
+* **Criteria:** * Handle 1,000,000+ requests per second concurrent ingestion.
+  * Calculate formal Back-of-the-Envelope estimates for Storage, RAM, and Network Bandwidth.
+  * Map explicit failover paths under multi-region infrastructure network splits.
 ## 🚀 Phase 4 & 5: The DevOps, SRE & Platform Infrastructure Tracks
 *Focus: Turning your distributed design skills into highly reliable, cloud-native automated infrastructure.*
 * **Timeline:** Months 7–12+
