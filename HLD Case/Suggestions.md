@@ -1,0 +1,10 @@
+# System Scalability & Concurrency Foundations Master Tracker
+
+| Topic / Pattern | Practice Mini-Project Idea | The "Hands-on" Challenge | Status |
+| :--- | :--- | :--- | :--- |
+| **Vertical vs. Horizontal Scaling** | Resource Limit Stress Simulator | Write a script that spins up memory/CPU intensive operations. Calculate the absolute vertical ceiling of your machine, then map out a hardware configuration plan to distribute that exact compute load horizontally across 3 smaller nodes. | **Done** |
+| **Stateless vs. Stateful Design** | Token-Based Session Extractor | Take an application that stores user login states inside a local memory dictionary (Stateful) and refactor it completely to store sessions in an external mock database or JWT token container (Stateless), allowing any server clone to authenticate the user. | **Done** |
+| **Concurrency Models: Thread-per-Request** | Multi-threaded Blocking Web Server | Build a basic socket server where each incoming client connection spawns a new operating system thread (`threading`). Simulate network lag and observe how system memory usage spikes as concurrent connections grow. | **Done** |
+| **Concurrency Models: Async & Non-Blocking I/O** | Single-threaded Event Loop Engine | Build a non-blocking socket server using asynchronous event pools (`asyncio`). Handle 500 concurrent lagging connections simultaneously on a single thread and log the performance difference vs the multi-threaded model. | **Done** |
+| **Performance Metrics: Latency vs. Throughput** | Load Testing Metrics Aggregator | Build a script that fires concurrent requests at an endpoint. Calculate and display the system metrics: Average Latency, 95th/99th Percentile Latency (p95/p99), and overall Throughput in Requests Per Second (RPS). | ⏳ **Queued** |
+| **System Reliability: Availability Calculations** | The "Nines" Outage Budgeter | Build a command-line calculator that takes a system's planned maintenance downtime and unexpected crash logs, computes its exact availability percentage, and determines if it meets the 99.99% ("Four Nines") SLA threshold. | ⏳ **Queued** |

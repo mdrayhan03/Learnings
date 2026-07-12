@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  # 1. The Gateway (Reverse Proxy)
+  nginx-proxy:
+    image: nginx:alpine
+    ports:
+      - "80:80" # Exposed to your laptop
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - flask_app_1
+
+  # 2. The Internal Hidden Flask App
+  flask_app_1:
+    build: ./flask_app_1  # Points to the folder containing the Dockerfile
+    # Notice: No ports are exposed here. It is isolated.

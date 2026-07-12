@@ -9,7 +9,7 @@ Status legend: `Done` · `In Progress` · `Pending`
 
 ## Phase 1: Networking Foundations
 
-| #   | Goal (Sub-phase)                                              | Status |
+| #   | Goal (Sub-phase)                                             | Status |
 | --- | ------------------------------------------------------------ | ------ |
 | 1.1 | OSI Model — Layer 4 (TCP/UDP, IP+Port routing)               | Done   |
 | 1.2 | OSI Model — Layer 7 (HTTP routing by URL/header/cookie)      | Done   |
@@ -21,7 +21,7 @@ Status legend: `Done` · `In Progress` · `Pending`
 
 ## Phase 2: Forward Proxies
 
-| #   | Goal (Sub-phase)                                             | Status |
+| #   | Goal (Sub-phase)                                            | Status |
 | --- | ----------------------------------------------------------- | ------ |
 | 2.1 | Anonymity levels (Transparent / Anonymous / Elite)          | Done   |
 | 2.2 | Content filtering, ACLs, DLP                                | Done   |
@@ -32,7 +32,7 @@ Status legend: `Done` · `In Progress` · `Pending`
 
 ## Phase 3: Reverse Proxies & NGINX
 
-| #   | Goal (Sub-phase)                                            | Status |
+| #   | Goal (Sub-phase)                                           | Status |
 | --- | ---------------------------------------------------------- | ------ |
 | 3.1 | NGINX event-driven architecture vs Apache                  | Done   |
 | 3.2 | `nginx.conf` structure (main/events/http/server/location)  | Done   |
@@ -45,7 +45,7 @@ Status legend: `Done` · `In Progress` · `Pending`
 
 ## Phase 4: Load Balancers
 
-| #   | Goal (Sub-phase)                                           | Status |
+| #   | Goal (Sub-phase)                                          | Status |
 | --- | --------------------------------------------------------- | ------ |
 | 4.1 | Static algorithms (Round Robin, Weighted, IP Hash)        | Done   |
 | 4.2 | Dynamic algorithms (Least Connections, Least Response)    | Done   |
@@ -59,17 +59,17 @@ Status legend: `Done` · `In Progress` · `Pending`
 
 | #   | Goal (Sub-phase)                                                | Status  |
 | --- | --------------------------------------------------------------- | ------- |
-| 5.1 | Reverse proxy caching (`proxy_cache`, cache zones, TTLs)        | Pending |
-| 5.2 | Cache headers (Cache-Control, ETag, Last-Modified)              | Pending |
-| 5.3 | Cache invalidation & busting (`proxy_cache_bypass`)             | Pending |
-| 5.4 | Hands-on: add caching + verify `X-Cache-Status` HIT/MISS        | Pending |
-| 5.5 | Compression (gzip / Brotli)                                     | Pending |
-| 5.6 | Keep-alive & upstream connection pooling                        | Pending |
-| 5.7 | Buffer tuning (`proxy_buffers`, `proxy_buffer_size`)            | Pending |
-| 5.8 | WebSocket proxying (Upgrade/Connection headers)                 | Pending |
-| 5.9 | HTTP/2 and HTTP/3 (QUIC) proxying                               | Pending |
-| 5.10| mTLS (mutual TLS, `ssl_verify_client`)                         | Pending |
-| 5.11| Sticky sessions (ip_hash / cookie / Redis-backed stateless)    | Pending |
+| 5.1 | Reverse proxy caching (`proxy_cache`, cache zones, TTLs)        | Done    |
+| 5.2 | Cache headers (Cache-Control, ETag, Last-Modified)              | Done    |
+| 5.3 | Cache invalidation & busting (`proxy_cache_bypass`)             | Done    |
+| 5.4 | Hands-on: add caching + verify `X-Cache-Status` HIT/MISS        | Done    |
+| 5.5 | Compression (gzip / Brotli)                                     | Done    |
+| 5.6 | Keep-alive & upstream connection pooling                        | Done    |
+| 5.7 | Buffer tuning (`proxy_buffers`, `proxy_buffer_size`)            | Done    |
+| 5.8 | WebSocket proxying (Upgrade/Connection headers)                 | Done    |
+| 5.9 | HTTP/2 and HTTP/3 (QUIC) proxying                               | Done    |
+| 5.10| mTLS (mutual TLS, `ssl_verify_client`)                          | Done    |
+| 5.11| Sticky sessions (ip_hash / cookie / Redis-backed stateless)     | Done    |
 
 ---
 
@@ -109,7 +109,7 @@ Status legend: `Done` · `In Progress` · `Pending`
 | 8.2 | Data plane vs control plane                                    | Pending |
 | 8.3 | Auto-mTLS, retries, timeouts, circuit breaking                 | Pending |
 | 8.4 | Traffic splitting & distributed tracing                        | Pending |
-| 8.5 | Linkerd vs Istio overview                                       | Pending |
+| 8.5 | Linkerd vs Istio overview                                      | Pending |
 | 8.6 | Hands-on: deploy app + Linkerd on kind/k3d                     | Pending |
 
 ---
@@ -121,29 +121,29 @@ Status legend: `Done` · `In Progress` · `Pending`
 | 9.1 | AWS ALB (L7) vs NLB (L4) vs Classic                            | Pending |
 | 9.2 | Target groups, listeners, cloud health checks                  | Pending |
 | 9.3 | GCP / Azure LB equivalents                                     | Pending |
-| 9.4 | Autoscaling with cloud LBs                                      | Pending |
-| 9.5 | Managed WAF + OWASP Top 10                                      | Pending |
-| 9.6 | DDoS protection (L3/4 vs L7)                                    | Pending |
-| 9.7 | Bot management & geo-blocking                                   | Pending |
+| 9.4 | Autoscaling with cloud LBs                                     | Pending |
+| 9.5 | Managed WAF + OWASP Top 10                                     | Pending |
+| 9.6 | DDoS protection (L3/4 vs L7)                                   | Pending |
+| 9.7 | Bot management & geo-blocking                                  | Pending |
 
 ---
 
 ## Phase 10: Observability & Operations
 
-| #    | Goal (Sub-phase)                                              | Status  |
+| #    | Goal (Sub-phase)                                             | Status  |
 | ---- | ------------------------------------------------------------ | ------- |
 | 10.1 | Custom NGINX log_format (upstream time, cache status)        | Pending |
 | 10.2 | Metrics with Prometheus                                      | Pending |
 | 10.3 | Dashboards with Grafana                                      | Pending |
-| 10.4 | Distributed tracing (X-Request-ID, Jaeger/OpenTelemetry)    | Pending |
-| 10.5 | Zero-downtime ops (graceful reload, draining, canary)       | Pending |
+| 10.4 | Distributed tracing (X-Request-ID, Jaeger/OpenTelemetry)     | Pending |
+| 10.5 | Zero-downtime ops (graceful reload, draining, canary)        | Pending |
 
 ---
 
 ## Phase 11: Capstone Projects (Docker)
 
-| #    | Goal (Project)                                               | Status  |
-| ---- | ----------------------------------------------------------- | ------- |
+| #    | Goal (Project)                                                 | Status  |
+| ---- | -------------------------------------------------------------- | ------- |
 | 11.1 | Project 1 — Secure Web Shell (SSL term + path routing + cache) | Pending |
 | 11.2 | Project 2 — HA Cluster with HAProxy (RR + health + failover)   | Pending |
 | 11.3 | Project 3 — Rate Limiting & Security Wall (ab/wrk test)        | Pending |

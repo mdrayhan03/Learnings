@@ -545,3 +545,356 @@ listen haproxy_stats
 ```
 
 When you open this page in your browser, healthy servers show up in green, while down or degraded servers immediately transition to red, allowing you to visually witness your health check parameters (rise/fall) in action.
+
+# Phase 5: Advanced Reverse Proxy & Caching
+## 5.1 Reverse Proxy Caching: The Core Mechanics
+When an NGINX proxy handles a request without caching, every user action triggers an upstream request to your application server. If an endpoint takes a fraction of a second to fetch from a database, thousands of simultaneous hits will quickly exhaust your application resources.
+
+With reverse proxy caching enabled:
+
+1. The first request hits NGINX → NGINX passes it to the backend (MISS).
+2. The backend responds → NGINX writes a copy of that response to your disk/memory cache zone.
+3. Subsequent requests within the Time-To-Live (TTL) limit bypass your backend entirely → NGINX serves them straight from disk (HIT).
+
+### Defining the Cache Space (proxy_cache_path)
+To turn caching on, NGINX needs a dedicated storage area configuration inside the http block of your config file:
+
+```nginx
+proxy_cache_path /var/cache/nginx levels=1:2 keys_zone=my_api_cache:10m max_size=1g inactive=60m use_temp_path=off;
+```
+- /var/cache/nginx: The directory on your server's disk where cached response contents are stored.
+- levels=1:2: Creates a nested directory tree structure so that your OS isn't slowed down by thousands of cache files sitting in a single flat directory.
+- keys_zone=my_api_cache:10m: Spawns an in-memory space (10 Megabytes) to hold the cache keys and metadata. A 10MB space can store roughly 80,000 keys for super-fast lookups.
+- max_size=1g: Limits the absolute maximum size of actual data stored on disk (1 Gigabyte). If this limit is breached, NGINX uses a Least Recently Used (LRU) algorithm to evict data.
+- inactive=60m: If a cached item isn't requested once within 60 minutes, NGINX purges it regardless of its current expiration settings.
+- use_temp_path=off: Instructs NGINX to write files directly to the cache folder instead of double-buffering it via a temporary directory first, saving disk I/O cycles.
+
+## 5.2 HTTP Cache Headers: The Shared Contract
+How does NGINX know what it is allowed to cache and how long it can hold onto it? It reads the explicit HTTP response headers sent back by your upstream Flask/Django/Node application server.
+
+### A. Freshness Control Headers
+- Cache-Control: The modern web standard header.
+
+    - Cache-Control: public, max-age=600 tells NGINX it can cache this response safely for 10 minutes (600 seconds).
+    - Cache-Control: private, no-store strictly forbids NGINX from saving a copy of user-specific data.
+
+- Expires: The legacy HTTP/1.0 fallback header specifying a hard timestamp string (e.g., Expires: Wed, 21 Oct 2026 07:28:00 GMT). If a max-age exists in Cache-Control, NGINX ignores this.
+
+### B. Validation Headers (Conditional Requests)
+If an item expires past its TTL, NGINX doesn't necessarily have to pull the entire payload fresh if nothing changed. It uses validation headers:
+
+- ETag (Entity Tag): A unique cryptographic hash representing the contents of a resource string. When the cache expires, NGINX passes an If-None-Match: "hash123" header to your backend. If the content matches, your backend returns a tiny 304 Not Modified status code, and NGINX safely marks its current cache as fresh again without downloading the body text.
+
+- Last-Modified: A timestamp indicating the last time a file was modified. Pairs up with an If-Modified-Since request verification header.
+
+## 5.3 Cache Invalidation & Overrides
+One of the hardest parts of caching is getting rid of obsolete data before its scheduled expiration timer drops down to zero.
+
+Overriding Backend Headers via NGINX
+If your backend application does not natively send explicit Cache-Control settings, you can instruct NGINX to apply a manual blanket rule using the proxy_cache_valid directive inside your location blocks:
+
+```nginx
+proxy_cache_valid 200 302 10m;  # Cache successful responses for 10 minutes
+proxy_cache_valid 404     1m;   # Cache Not Found pages for 1 minute
+```
+### Forcing an Upstream Fetch (proxy_cache_bypass)
+If an administrative user modifies content, they need to see changes immediately. You can track specific HTTP headers or query arguments to force NGINX to bypass the cache line:
+
+```nginx
+# If a client sends a header like "secret-bypass: true", fetch straight from backend
+proxy_cache_bypass $http_secret_bypass;
+```
+## 5.4 Hands-on Lab: Real-Time Cache Tracking
+Let's adapt your existing multi-container configuration layout to create a local caching sandbox so you can inspect caching states directly.
+
+1. Update your Flask Apps
+Update your internal flask_app code snippets (e.g., in your / index path) to return a dynamic time-stamp string, but explicitly pass a Cache-Control header allowing public storage for 15 seconds.
+
+```python
+import time
+from flask import Flask, make_response
+
+app = Flask(__name__)
+
+@app.route('/')
+def home():
+    current_time = time.strftime("%Y-%m-%d %H:%M:%S")
+    response = make_response(f"Hello from Backend! Current server time is: {current_time}\n")
+    # Tell NGINX it can cache this response for 15 seconds
+    response.headers['Cache-Control'] = 'public, max-age=15'
+    return response
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000)
+```
+2. The Sandbox nginx.conf
+Create an NGINX configuration block that sets up a 10MB memory zone, activates the cache tracking header ($upstream_cache_status), and proxies requests down to your application:
+
+```nginx
+# Must sit within the root 'http' context block
+proxy_cache_path /var/cache/nginx levels=1:2 keys_zone=my_sandbox_cache:10m max_size=500m inactive=10m use_temp_path=off;
+
+server {
+    listen 80;
+
+    location / {
+        proxy_cache my_sandbox_cache;
+        
+        # Inject custom tracking header into your curl output responses
+        add_header X-Cache-Status $upstream_cache_status;
+        
+        proxy_pass http://flask_app_1:5000; # Swap this out with your upstream definitions
+    }
+}
+```
+3. Verify Your Mastery
+Once your containers are spun up via Docker compose, open your terminal and fire repeated curl -I requests against your proxy endpoint:
+
+    ```bash
+    curl -I http://localhost/
+    ```
+  - First hit: You will see X-Cache-Status: MISS. Your terminal body text shows the current time.
+  - Second hit (1 second later): You will see X-Cache-Status: HIT. Notice that the timestamp printed in your console is locked in place and "frozen". The backend was never invoked.
+  - Hit after 16 seconds: The status flips to EXPIRED. NGINX reaches out to your backend container, fetches a fresh time string, and locks it down for another 15-second block.
+
+## 5.5: Compression (gzip / Brotli).
+When a user visits your application, your backend serves resources like HTML, CSS, JSON APIs, and JavaScript. If your uncompressed JavaScript bundle or JSON payload is 2MB, a user on a mobile device has to wait for all 2MB to download over the network.
+<br>
+By offloading compression to NGINX, the reverse proxy squashes these text-based files on the fly before sending them over the wire, cutting payload sizes by up to 70–80%. This reduces network bandwidth costs and drastically speeds up your application's Page Load Time.
+
+1. gzip vs. Brotli
+
+Historically, gzip has been the undisputed king of web compression. However, modern infrastructure uses a combination of both.
+| Feature | gzip | Brotli |
+| :--- | :--- | :--- |
+| **Creator** | Open source standard (1992) | Google (2015) |
+| **Algorithm** | DEFLATE (LZ77 + Huffman coding) | LZ77 + Huffman + Static Dictionary |
+| **Performance** | Fast compression speed, lower CPU overhead. | Shines at text compression; typically 15–30% smaller files than gzip at the same visual/data quality. |
+| **CPU Cost** | Low | High (on maximum compression settings). |
+| **Browser Support** | Universal (100% of modern browsers). | Universal over HTTPS only (required by browsers for security). |
+
+Why is Brotli better for text? Brotli contains a pre-defined static dictionary of common web strings (like <div>, <table>, javascript:, common HTML attributes). Instead of figuring out how to compress those words from scratch, it simply references its internal dictionary, resulting in smaller file footprints.
+2. NGINX Implementation: Gzip
+
+NGINX has native built-in support for gzip. You configure it inside the http block so it applies across all your application frontends.
+```nginx
+http {
+    # Turn gzip compression ON
+    gzip on;
+
+    # Compression level (1 = fastest/largest file, 9 = slowest/smallest file)
+    # Level 5 or 6 is the production "sweet spot" (max savings without burning excess CPU)
+    gzip_comp_level 5;
+
+    # Don't compress tiny files where the CPU overhead costs more than network savings
+    gzip_min_length 256;
+
+    # Tell proxies/CDNs to cache both compressed and uncompressed versions of assets separately
+    gzip_vary on;
+
+    # Enable compression for requests coming from reverse proxies (like Cloudflare/Load Balancers)
+    gzip_proxied any;
+
+    # CRITICAL: Specify WHICH types of files to compress. 
+    # Never compress binary formats like JPEG, PNG, or MP4—they are already compressed. 
+    # Trying to gzip an image just wastes CPU and can actually make the file larger.
+    gzip_types
+        text/plain
+        text/css
+        application/json
+        application/javascript
+        application/x-javascript
+        text/xml
+        application/xml
+        application/xml+rss
+        text/javascript;
+}
+```
+3. NGINX Implementation: BrotliBrotli is not bundled into standard NGINX by default; it requires an official open-source module from Google (ngx_brotli). In containerized environments, you usually grab an NGINX image that has it pre-compiled, or build it as a dynamic module.
+
+Once installed, its configuration layout mirrors gzip exactly:
+```nginx
+http {
+    brotli on;
+    brotli_comp_level 4; # Sweet spot for on-the-fly Brotli compression
+    brotli_min_length 256;
+    brotli_vary on;
+    brotli_types
+        text/plain
+        text/css
+        application/json
+        application/javascript
+        text/xml
+        text/javascript;
+}
+```
+### Can you run both together?
+Yes! If you enable both, NGINX will look at the client's request header (Accept-Encoding). If a modern browser says it accepts br (Brotli), NGINX uses Brotli. If an older client only supports gzip, NGINX falls back to gzip automatically.
+
+4. Hands-on Lab: Verifying CompressionTo test this out, you don't even need Docker apps to return compressed data—we can make NGINX compress a massive mock JSON or text payload.
+### Step 1: Create a Sandbox NGINX config
+Create a local file named nginx.conf:
+```nginx
+events {}
+
+http {
+    include       /etc/nginx/mime.types;
+    
+    # Enable Gzip
+    gzip on;
+    gzip_comp_level 6;
+    gzip_min_length 100;
+    gzip_types application/json text/plain;
+
+    server {
+        listen 80;
+
+        # Endpoint returning a large text string directly from NGINX
+        location /data {
+            default_type application/json;
+            return 200 '{"users": [{"id": 1, "name": "Alice", "role": "Engineer"}, {"id": 2, "name": "Bob", "role": "Designer"}, {"id": 3, "name": "Charlie", "role": "Manager"}, {"id": 4, "name": "David", "role": "Lead"}]}';
+        }
+    }
+}
+```
+### Step 2: Spin it up in Docker
+Run a quick, isolated NGINX container pointing to your file:
+```bash
+docker run --name compression-test -v $(pwd)/nginx.conf:/etc/nginx/nginx.conf:ro -p 8080:80 -d nginx:alpine
+```
+### Step 3: Test with curl
+To see the compression in action, you must explicitly tell curl that your terminal supports reading compressed formats using the --compressed flag or passing the header manually.
+
+**Test 1**: Requesting UNCOMPRESSED data (No compression headers sent)
+```bash
+curl -I http://localhost:8080/data
+```
+- Look at the response headers: You will see a standard Content-Length: 177.
+
+**Test 2:** Requesting COMPRESSED data (Telling NGINX you support gzip)
+```bash
+curl -I -H "Accept-Encoding: gzip" http://localhost:8080/data
+```
+- Look at the response headers now: * Content-Encoding: gzip will appear.
+    - Content-Length will disappear or shrink because NGINX is now streaming a compressed binary chunk (Transfer-Encoding: chunked).
+
+## 5.6 Keep-Alive & Upstream Connection Pooling
+By default, every time NGINX forwards a request to your Flask/Django backend cluster, it opens a brand new TCP connection, executes a handshake, sends the request, and then tears down the connection. Under heavy load, your system wastes CPU cycles and ephemeral ports constantly opening and closing sockets.
+
+Upstream Connection Pooling keeps a pool of idle, open TCP connections to your backend services alive, reusing them for subsequent user requests.
+
+Configuration:
+```nginx
+upstream flask_cluster {
+    server flask_app_1:5000;
+    server flask_app_2:5000;
+
+    # Keep up to 32 idle connections open per worker process to the backends
+    keepalive 32;
+}
+
+server {
+    listen 80;
+
+    location / {
+        proxy_pass http://flask_cluster;
+        
+        # CRITICAL: Force HTTP/1.1 (HTTP/1.0 doesn't support persistent connection pooling)
+        proxy_http_version 1.1;
+        
+        # Clear the 'Connection' header sent by the browser so NGINX can reuse the upstream socket
+        proxy_set_header Connection "";
+    }
+}
+```
+## 5.7 Buffer Tuning (proxy_buffers)
+When NGINX receives a response from your backend application, it holds it in an internal memory buffer before streaming it to the client browser.
+
+- If buffers are too small, NGINX has to write excess data to a slow temporary disk file.
+
+- If buffers are too large, NGINX wastes system RAM holding large payloads.
+
+```nginx
+location / {
+    proxy_buffering on;
+    
+    # Allocates 8 buffer blocks of 4KB or 8KB (matching your OS page size)
+    proxy_buffers 8 8k;
+    
+    # The initial buffer used to read the very first part of the backend response header
+    proxy_buffer_size 4k;
+    
+    # Limits memory allocated for data waiting to be pushed to disk
+    proxy_max_temp_file_size 1024m;
+}
+```
+## 5.8 WebSocket Proxying
+WebSockets are persistent, bidirectional connection channels used for live chats or dashboards. Unlike standard HTTP requests, they begin as an HTTP connection but instantly negotiate an Upgrade handshake to transition to raw TCP streams. A normal proxy_pass block will strip these headers and drop the socket.
+
+```nginx
+location /ws/ {
+    proxy_pass http://flask_cluster;
+    proxy_http_version 1.1;
+
+    # Pass the WebSocket negotiation headers unmodified down to the backend
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "Upgrade";
+}
+```
+## 5.9 HTTP/2 and HTTP/3 (QUIC) Proxying
+- HTTP/2: Introduces multiplexing, allowing a browser to request dozens of assets (images, scripts) over a single open TCP connection simultaneously instead of queueing them up.
+
+- HTTP/3: Abandons TCP entirely and runs over UDP via a protocol called QUIC. It eliminates head-of-line blocking, meaning if one network packet drops on a mobile connection, it doesn't freeze the rest of your app's downloads.
+
+```nginx
+server {
+    # Activating HTTP/2 and HTTP/3 (QUIC) on port 443
+    listen 443 ssl http2;
+    listen 443 quic reuseport; # HTTP/3 runs over UDP
+
+    ssl_certificate /etc/nginx/certs/live.crt;
+    ssl_certificate_key /etc/nginx/certs/live.key;
+
+    # Let browsers know HTTP/3 is available via an explicit response header
+    add_header Alt-Svc 'h3=":443"; ma=86400';
+}
+```
+## 5.10 mTLS (Mutual TLS)
+In standard HTTPS, only the server presents a certificate to prove its identity to the user. In high-security systems or internal microservices, you want mTLS, where the client also must present a trusted certificate back to NGINX before accessing an API endpoint.
+
+```nginx
+server {
+    listen 443 ssl;
+    
+    ssl_certificate /etc/nginx/certs/server.crt;
+    ssl_certificate_key /etc/nginx/certs/server.key;
+
+    # Point to the Root Certificate Authority (CA) that issued your valid client certificates
+    ssl_client_certificate /etc/nginx/certs/ca.crt;
+    
+    # Turn ON client certificate verification
+    ssl_verify_client on; 
+
+    location /secure-api {
+        proxy_pass http://internal_backend;
+    }
+}
+```
+If an unauthenticated script or browser tries to hit /secure-api without installing the client certificate, NGINX instantly drops them at the front gate with an HTTP 400 Bad Request before your app ever sees it.
+
+## 5.11 Sticky Sessions (Session Persistence)
+When load balancing stateful apps, you sometimes need a user's requests to consistently hit the exact same backend container (e.g., their cart state is saved locally on Server 2).
+
+- ip_hash: Hashes the user's IP to match them to a node. (Breaks if the user switches from Wi-Fi to cellular data).
+
+- sticky cookie: NGINX inserts a custom tracking cookie into the user's browser session. On their next click, NGINX reads the cookie and maps them back to the correct container.
+
+```nginx
+upstream stateful_cluster {
+    # ip_hash is open source
+    ip_hash; 
+    server backend_node_1:5000;
+    server backend_node_2:5000;
+}
+```
+Production Reality Note: While sticky sessions exist, modern cloud-native systems try to make application tiers entirely stateless. Instead of forcing stickiness at the load balancer layer, systems typically save session records to a centralized, shared memory database like Redis so any container can service any request seamlessly.
