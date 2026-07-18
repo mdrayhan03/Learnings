@@ -898,3 +898,135 @@ upstream stateful_cluster {
 }
 ```
 Production Reality Note: While sticky sessions exist, modern cloud-native systems try to make application tiers entirely stateless. Instead of forcing stickiness at the load balancer layer, systems typically save session records to a centralized, shared memory database like Redis so any container can service any request seamlessly.
+
+# Phase 6: CDN & Edge Caching
+## 6.1: Edge Nodes & Points of Presence (PoPs)
+When a user in London requests an asset from your origin server hosted in Virginia, the network packets have to cross the Atlantic Ocean. This adds roughly 70–100ms of structural latency due to the speed of light in fiber optic cables.
+
+A **Content Delivery Network (CDN)** solves this by moving static content closer to the user using a distributed network of infrastructure.
+
+- Point of Presence (PoP): A physical data center location situated at key internet exchange points around the world. A single CDN provider might have hundreds of PoPs worldwide.
+
+- Edge Node: The actual caching servers living inside those PoPs.
+```
+[User in London] ───(5ms)───> [London PoP / Edge Node] (Cache HIT: Serves file instantly)
+                                     │
+                             (Cache MISS: 80ms)
+                                     │
+                                     ▼
+                          [Origin Server in Virginia]
+```
+**The Invalidation Challenge**
+Edge nodes are fantastic for static assets (images, JS, CSS). However, the major architectural trade-off is cache invalidation. Once a file is cached across 200 global edge nodes, changing it requires either:
+
+1. Purging the cache: Sending an API call to the CDN to evict the asset (which takes time to propagate globally).
+
+2. Cache Busting: Changing the asset's URL string entirely (e.g., style.css?v=2 or style.a8f3b.css), which is the industry best practice.
+
+## 6.2: Origin Shielding & The Thundering Herd Problem
+When your application scales globally, edge nodes can sometimes accidentally stress your infrastructure instead of protecting it. This brings us to two critical edge-architecture concepts.
+
+1. The Thundering Herd Problem
+Imagine you drop a highly anticipated update or a piece of viral content. Suddenly, 50,000 users across the globe request the exact same asset at the exact same millisecond.
+
+    If that asset isn't cached at the edge nodes yet, every single individual edge node will simultaneously look at its local storage, register a cache miss, and forward the request to your origin server. Your backend is instantly crushed by thousands of concurrent requests for the exact same file.
+
+2. The Solution: Origin Shielding & Request Collapsing
+To prevent this, modern CDNs implement two layers of defense:
+
+    - Request Collapsing (Coalescing): If an edge node receives 500 concurrent requests for banner.png while it is empty, it will only send one request to the origin. It places the other 499 requests on hold, waits for the origin to respond, populates its cache, and then answers all 500 users at once.
+
+    - Origin Shielding: Instead of having 200 global PoPs talk directly to your origin server on a cache miss, the CDN designates a single, high-capacity PoP close to your backend infrastructure to act as a Shield.
+    ```
+    [200 Global Edge Nodes] ──(200 Misses)──> [Origin Shield Node] ──(1 Request)──> [Origin Server]
+    ```
+All global edge misses route to the Shield first. If the Shield has it, the origin is never touched. If the Shield misses, it performs a single request to your origin.
+
+## 6.3: Cache Hit Ratio (CHR) Metric
+The efficiency of your edge caching layer is directly evaluated by the Cache Hit Ratio (CHR). This metric tells you the percentage of incoming content requests that the CDN successfully served from its edge cache without ever knocking on your origin server's door.
+The Equation
+$$\text{CHR} = \left( \frac{\text{Cache Hits}}{\text{Cache Hits} + \text{Cache Misses}} \right) \times 100$$
+- Cache Hit: The requested resource is present, valid, and fresh at the edge node. It is served instantly.
+- Cache Miss: The resource is either missing from the edge node or has expired (stale). The edge node must fetch it from the origin, pass it to the client, and store a copy locally.
+
+  **Production Reality Check:** An ideal CHR for static assets (images, fonts, compiled JS/CSS) is 95% or higher. If your global CHR drops below 70-80% for static assets, it means your cache eviction policies are too aggressive, your TTLs (Time to Live) are too short, or your cache-busting deployment strategy is misconfigured.
+**Bandwidth Offload**
+A sister metric to CHR is Bandwidth Offload, which measures the actual data volume saved:
+$$\text{Bandwidth Offload (\%)} = \left( \frac{\text{Bytes Served from Cache}}{\text{Total Bytes Delivered}} \right) \times 100$$
+This is the metric that directly shrinks your cloud hosting bill, as egress fees from CDNs (or services like Cloudflare) are significantly cheaper than raw egress out of AWS, GCP, or bare-metal data centers.
+## 6.4: Static vs. Dynamic Content Caching
+To keep CHR high without breaking your application, you must handle static and dynamic files completely differently.
+**Static Content Caching**
+Static files do not change based on who is asking for them. A logo asset or a minified React bundle looks the same to every single user globally.
+- **Strategy:** Cache aggressively at the edge.
+- **Cache-Control Headers:** Use high max-age limits (e.g., Cache-Control: public, max-age=31536000 — which keeps the asset fresh for up to 1 year) combined with a build-system hashing tool (e.g., main.a8b9c.js) so updating the app deploys a brand new filename.
+### Dynamic Content Caching
+Dynamic responses are custom-tailored to specific requests (e.g., an API endpoint returning /api/v1/user/profile or a real-time ride-sharing feed like your RideBuddy dashboard coordinates).
+- **Strategy:** By default, bypass edge caching entirely using Cache-Control: no-store, no-cache, must-revalidate.
+- **Advanced Dynamic Caching (Edge Compute):** Modern CDNs allow you to execute micro-logic at the edge (using Cloudflare Workers or Fastly Compute@Edge). This allows you to inspect authentication tokens or session cookies at the closest network node and serve semi-dynamic cached frames without hitting the central backend database.
+
+## 6.5: Anycast Routing
+
+Before a user's browser can fetch an asset from a CDN edge node, it has to answer a basic question: *Which IP address do I talk to?* 
+
+In standard networking (**Unicast**), every single server on the internet has a unique IP address. If your server is in New York, a user in Tokyo sends a packet addressed to that exact machine, routing across the world.
+
+CDNs use **Anycast Routing** to completely flip this script. 
+
+### How Anycast Works
+In an Anycast network, **multiple physical servers across the globe share the exact same IP address.** 
+
+Through the Border Gateway Protocol (BGP)—which is the core routing roadmap of the internet—your internet service provider (ISP) will automatically direct your connection to the physical data center sharing that IP address that is **topologically closest** to you (usually the lowest number of network hops away).
+```
+                    ┌───> [London Edge Node] (IP: 192.0.2.1) ───> ~5ms
+                    │
+[User In London] ───┼
+(Requests 192.0.2.1)|
+                    │
+                    └───> [Tokyo Edge Node]  (IP: 192.0.2.1) ───> (Ignored by router)
+```
+### The Architectural Benefits
+1.  **Massive Latency Reduction:** The TCP handshake and TLS negotiations hit the absolute closest Anycast node, keeping connection times incredibly low.
+2.  **Built-in DDoS Mitigation:** If an attacker attempts to flood your application with a massive DDoS attack from botnets across the globe, the attack traffic is naturally distributed and absorbed across all the global edge data centers instead of targeting a single origin server.
+
+---
+
+## 6.6 & 6.7: Hands-On Cloudflare & Cache Inspection
+
+Now it’s time to move out of the theory block and look at what this looks like in production. When you place a domain behind a provider like Cloudflare, they act as your Anycast network proxy.
+
+### Inspecting the Headers
+When a request passes through an edge cache, the CDN appends specific diagnostic tracking headers so you can debug the routing path. For Cloudflare, the absolute most critical header to check is **`CF-Cache-Status`**.
+
+Here are the major cache states you will see when analyzing network requests in your browser terminal or via `curl`:
+
+| Header Value | What It Means | Architectural Action |
+| :--- | :--- | :--- |
+| **`HIT`** | The asset was found fresh in the edge node's memory. | Served instantly from edge; zero load on origin. |
+| **`MISS`** | The asset wasn't found at the edge node. | Pulled from origin, cached for next time. |
+| **`EXPIRED`** | The asset was there, but its TTL lapsed. | Pulled from origin to refresh the edge cache. |
+| **`BYPASS`** | The edge deliberately ignored caching due to a configuration rule. | Request passed straight to origin. |
+| **`DYNAMIC`** | The asset type or endpoint configuration defaults to no-cache. | Cloudflare proxies the request straight to origin every time. |
+
+---
+
+### Verifying a Production CDN Request
+
+Let's look at how you verify this via the CLI. If you run a verbose network trace on a static asset routed through an edge proxy, you can instantly read its caching lifecycle:
+
+```bash
+curl -I [https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js](https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js)
+```
+
+The output gives you the raw architectural response headers straight from the closest edge node:
+```nginx
+HTTP/2 200
+date: Sat, 18 Jul 2026 11:12:00 GMT
+content-type: application/javascript; charset=utf-8
+cache-control: public, max-age=31536000, immutable
+cf-cache-status: HIT
+age: 245321
+server: cloudflare
+alt-svc: h3=":443"; ma=86400
+```
+Notice cf-cache-status: HIT. That tells us this request never even touched the origin server. It was fulfilled in milliseconds right from the edge network. The age: 245321 header explicitly shows how many seconds this specific file has lived inside that edge node's memory cache since it was last fetched from the origin.

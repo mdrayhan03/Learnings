@@ -1,0 +1,42 @@
+Part 1
+1. Ans: here using SNI(Server Name Indication) so it want hostname in the request if this information is missing it drops the handshake.
+
+2. Ans: it will give MISS, because nginx will look for cache but first time no cache found so MISS. but this is private so nginx will not cache it so in the 2nd and onward request it will do same check for cache and give MISS
+
+3. Ans: we have forget to implement keepalive, without this in every request nginx do new handshake with the app and after request finish it close and when server load is more that time this everytime handshake takes time and make the Too many open files errors.
+
+4. Ans: for real time chat we need websocket and for websocket we need to use two extra line
+```
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "Upgrade";
+```
+
+Part 2
+1st error
+```
+4:      upstream internal_cluster {
+5:          ip_hash;
+6:          server backend_node_1:8080 check inter=2s;
+7:          server backend_node_2:8080 check inter=2s;
+8:          keepalive 16;
+9:      }
+```
+when ip hash nginx connect the user to the specific app so if keepalive clear connection then for that ip hash nginx will loose that specific app
+
+2nd error
+```
+6:          server backend_node_1:8080 check inter=2s;
+7:          server backend_node_2:8080 check inter=2s;
+```
+in the open source we can't use check & inter syntax we have to use max_retires & fail_timeout
+
+3rd error
+```
+22:         location /ws { 
+23:             proxy_pass http://internal_cluster; 
+24:             proxy_http_version 1.0; 
+25:             proxy_set_header Upgrade$http_upgrade;
+26:             proxy_set_header Connection "upgrade";
+27:         }
+```
+we are using websocket here but for websocket we need http verion 1.1 here is 1.0 it's wrong

@@ -77,13 +77,13 @@ Status legend: `Done` · `In Progress` · `Pending`
 
 | #   | Goal (Sub-phase)                                               | Status  |
 | --- | -------------------------------------------------------------- | ------- |
-| 6.1 | Edge nodes / PoPs concept                                      | Pending |
-| 6.2 | Origin shielding & thundering herd                             | Pending |
-| 6.3 | Cache hit ratio metric                                         | Pending |
-| 6.4 | Static vs dynamic content caching                              | Pending |
-| 6.5 | Anycast routing                                                | Pending |
-| 6.6 | Hands-on: domain behind Cloudflare + cache rules               | Pending |
-| 6.7 | Inspect `CF-Cache-Status` header                               | Pending |
+| 6.1 | Edge nodes / PoPs concept                                      | Done    |
+| 6.2 | Origin shielding & thundering herd                             | Done    |
+| 6.3 | Cache hit ratio metric                                         | Done    |
+| 6.4 | Static vs dynamic content caching                              | Done    |
+| 6.5 | Anycast routing                                                | Done    |
+| 6.6 | Hands-on: domain behind Cloudflare + cache rules               | Done    |
+| 6.7 | Inspect `CF-Cache-Status` header                               | Done    |
 
 ---
 
