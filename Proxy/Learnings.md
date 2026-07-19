@@ -898,3 +898,58 @@ upstream stateful_cluster {
 }
 ```
 Production Reality Note: While sticky sessions exist, modern cloud-native systems try to make application tiers entirely stateless. Instead of forcing stickiness at the load balancer layer, systems typically save session records to a centralized, shared memory database like Redis so any container can service any request seamlessly.
+
+# Phase 7: API Gateways
+## 7.1: Authentication & Authorization at the Gateway
+In a naive system design, every single microservice handles its own security checks. Your BookingService, BillingService, and UserService would all independently have to contain duplicate code to parse database records or cryptographically verify tokens.
+
+An API Gateway introduces Centralized Authentication. The gateway strips away this security burden entirely. It intercepts the client, verifies their identity, and passes a clean, trusted identity header forward to your services.
+
+```
+                  ┌───> [ Valid Key? Yes ] ───> Passes Header ───> [ Booking Service ]
+                  │
+[ Client Request ]───> [ API Gateway ]
+                  │
+                  └───> [ Expired Key? ] ───> Instantly Returns 401 Unauthorized
+```
+### The 3 Core Gateway Auth Mechanisms
+
+#### A. API Keys
+* **How it works:** The client passes a simple, unique alphanumeric string in an HTTP header (e.g., `apikey: secret_123`). The Gateway checks an internal datastore (or in-memory cache) to ensure that key is valid.
+* **Best used for:** Low-complexity machine-to-machine integrations or third-party developer access tiers.
+
+#### B. JSON Web Tokens (JWT)
+* **How it works:** The gateway acts as a signature validator. It doesn't query a database. When a request comes in with `Authorization: Bearer <JWT>`, the gateway parses the cryptographic token signature using a shared secret or a public key.
+* **The Performance Advantage:** Because the verification is purely mathematical computation, the gateway can authorize millions of requests per second without incurring database round-trips.
+
+#### C. OAuth2 / OpenID Connect (OIDC)
+* **How it works:** The gateway collaborates with a central Identity Provider (IdP) like Keycloak, Auth0, or Okta. It intercepts an incoming authorization code, exchanges it or validates it against the introspection endpoint of the IdP, and caches the result.
+
+---
+
+# 7.2: Per-Consumer Rate Limiting & Quotas
+
+In Phase 3, you learned about basic IP rate limiting to prevent global denial-of-service attacks. At the API Gateway layer, rate limiting becomes vastly more granular: it becomes **Per-Consumer (Authenticated Client) Management**.
+
+This enables you to monetize your API infrastructure directly by building tiered limits.
+
+### Global IP Rate Limiting vs. Per-Consumer Rate Limiting
+
+| Feature | Global Proxy Limiting (Phase 3) | Per-Consumer Gateway Limiting (Phase 7) |
+| :--- | :--- | :--- |
+| **Tracking Identifier** | Client Remote IP Address | Authenticated API Key / User ID / Organization ID |
+| **Storage Backend** | Local Worker Shared Memory | Central Distributed Cache (Redis) |
+| **Primary Goal** | Stop brute force and server crashes | Enforce SaaS subscription tiers and fair usage |
+
+### The Token Bucket Algorithm
+
+API Gateways typically enforce this using the **Token Bucket** or **Leaky Bucket** algorithms.
+
+Imagine a user's bucket holds a maximum of 100 tokens. Every API call they execute consumes 1 token. If their bucket empties, the Gateway drops their requests instantly with an `HTTP 429 Too Many Requests`. Meanwhile, the bucket constantly refills at a steady rate (e.g., 5 tokens back per second).
+
+#### Conceptual Gateway Header feedback to the consumer:
+```http
+X-RateLimit-Limit: 1000       # Max allowed in this window
+X-RateLimit-Remaining: 984    # How many calls they have left
+X-RateLimit-Reset: 15         # Seconds until their bucket refills completely
+```
