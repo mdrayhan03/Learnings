@@ -1030,3 +1030,380 @@ server: cloudflare
 alt-svc: h3=":443"; ma=86400
 ```
 Notice cf-cache-status: HIT. That tells us this request never even touched the origin server. It was fulfilled in milliseconds right from the edge network. The age: 245321 header explicitly shows how many seconds this specific file has lived inside that edge node's memory cache since it was last fetched from the origin.
+
+# Phase 7: API Gateways
+## 7.1: Authentication & Authorization at the Gateway
+In a naive system design, every single microservice handles its own security checks. Your BookingService, BillingService, and UserService would all independently have to contain duplicate code to parse database records or cryptographically verify tokens.
+
+An API Gateway introduces Centralized Authentication. The gateway strips away this security burden entirely. It intercepts the client, verifies their identity, and passes a clean, trusted identity header forward to your services.
+
+```
+                  ┌───> [ Valid Key? Yes ] ───> Passes Header ───> [ Booking Service ]
+                  │
+[ Client Request ]───> [ API Gateway ]
+                  │
+                  └───> [ Expired Key? ] ───> Instantly Returns 401 Unauthorized
+```
+### The 3 Core Gateway Auth Mechanisms
+
+#### A. API Keys
+* **How it works:** The client passes a simple, unique alphanumeric string in an HTTP header (e.g., `apikey: secret_123`). The Gateway checks an internal datastore (or in-memory cache) to ensure that key is valid.
+* **Best used for:** Low-complexity machine-to-machine integrations or third-party developer access tiers.
+
+#### B. JSON Web Tokens (JWT)
+* **How it works:** The gateway acts as a signature validator. It doesn't query a database. When a request comes in with `Authorization: Bearer <JWT>`, the gateway parses the cryptographic token signature using a shared secret or a public key.
+* **The Performance Advantage:** Because the verification is purely mathematical computation, the gateway can authorize millions of requests per second without incurring database round-trips.
+
+#### C. OAuth2 / OpenID Connect (OIDC)
+* **How it works:** The gateway collaborates with a central Identity Provider (IdP) like Keycloak, Auth0, or Okta. It intercepts an incoming authorization code, exchanges it or validates it against the introspection endpoint of the IdP, and caches the result.
+
+---
+
+# 7.2: Per-Consumer Rate Limiting & Quotas
+
+In Phase 3, you learned about basic IP rate limiting to prevent global denial-of-service attacks. At the API Gateway layer, rate limiting becomes vastly more granular: it becomes **Per-Consumer (Authenticated Client) Management**.
+
+This enables you to monetize your API infrastructure directly by building tiered limits.
+
+### Global IP Rate Limiting vs. Per-Consumer Rate Limiting
+
+| Feature | Global Proxy Limiting (Phase 3) | Per-Consumer Gateway Limiting (Phase 7) |
+| :--- | :--- | :--- |
+| **Tracking Identifier** | Client Remote IP Address | Authenticated API Key / User ID / Organization ID |
+| **Storage Backend** | Local Worker Shared Memory | Central Distributed Cache (Redis) |
+| **Primary Goal** | Stop brute force and server crashes | Enforce SaaS subscription tiers and fair usage |
+
+### The Token Bucket Algorithm
+
+API Gateways typically enforce this using the **Token Bucket** or **Leaky Bucket** algorithms.
+
+Imagine a user's bucket holds a maximum of 100 tokens. Every API call they execute consumes 1 token. If their bucket empties, the Gateway drops their requests instantly with an `HTTP 429 Too Many Requests`. Meanwhile, the bucket constantly refills at a steady rate (e.g., 5 tokens back per second).
+
+#### Conceptual Gateway Header feedback to the consumer:
+```http
+X-RateLimit-Limit: 1000       # Max allowed in this window
+X-RateLimit-Remaining: 984    # How many calls they have left
+X-RateLimit-Reset: 15         # Seconds until their bucket refills completely
+```
+
+# ⚡ Master Guide: API Rate Limiting & Algorithms
+
+Rate limiting is an essential architectural mechanism used to control the rate of incoming and outgoing traffic for a service. It protects backend infrastructure from traffic spikes, prevents resource exhaustion (DDoS/abuse), ensures fair usage across tenants, and enables API monetization tiers (e.g., Free vs. Pro vs. Enterprise).
+
+---
+
+# 🏛️ Core Rate Limiting Concepts
+
+## 1. Key Terminology
+
+- **Quota / Limit:** The maximum number of requests allowed within a specified duration (e.g., **100 requests per minute**).
+- **Time Window:** The duration over which request counts are tracked or bucket levels are evaluated.
+- **Burst Capacity:** The maximum number of requests a client can execute in an instantaneous spike before being throttled.
+- **Refill / Decay Rate:** The speed at which quota or tokens regenerate over time.
+
+---
+
+## 2. Common HTTP Response Telemetry Headers
+
+Standardized headers passed back to the client to indicate usage context and throttling state.
+
+```http
+HTTP/1.1 429 Too Many Requests
+Content-Type: application/json
+Retry-After: 12
+X-RateLimit-Limit: 100
+X-RateLimit-Remaining: 0
+X-RateLimit-Reset: 1711234567
+```
+
+### Header Meanings
+
+| Header | Description |
+|---------|-------------|
+| **X-RateLimit-Limit** | Maximum allowed requests in the current window. |
+| **X-RateLimit-Remaining** | Remaining quota in the active window or bucket. |
+| **X-RateLimit-Reset** | Unix timestamp (seconds) when quota resets or tokens replenish. |
+| **Retry-After** | Number of seconds before the client should retry. |
+
+---
+
+# 🧮 Rate Limiting Algorithms Deep Dive
+
+## 1. Fixed Window Counter
+
+The timeline is broken into fixed time blocks (e.g., **12:00–12:01**, **12:01–12:02**). A counter tracks requests within the active block.
+
+```text
+      [100 Requests]        [100 Requests]
+------------|------------------|-------------
+         12:00:59          12:01:00
+
+Client sends:
+100 requests at 12:00:59
+100 requests at 12:01:00
+
+= 200 requests in about 2 seconds
+```
+
+### How it Works
+
+1. Increment a counter for `user_id:window_timestamp`.
+2. If `counter > limit`, reject with **HTTP 429**.
+3. When the window changes, start a new counter.
+
+### Pros
+
+- Extremely low memory usage.
+- Very easy to implement (`INCR + EXPIRE` in Redis).
+
+### Cons
+
+- Boundary spike problem.
+- A client can effectively send **2× the allowed limit** across adjacent windows.
+
+---
+
+## 2. Sliding Window Log
+
+Keeps a chronological log of every request timestamp.
+
+### Example Log
+
+```text
+User 101:
+
+[
+ 1711234001,
+ 1711234015,
+ 1711234042,
+ 1711234058
+]
+```
+
+### How it Works
+
+1. Remove timestamps older than:
+
+```
+current_time - window_size
+```
+
+2. Count remaining timestamps.
+
+3. If count < limit:
+
+- Accept request
+- Store current timestamp
+
+Otherwise:
+
+- Reject with **HTTP 429**
+
+### Pros
+
+- 100% accurate.
+- Eliminates boundary spikes completely.
+
+### Cons
+
+- High memory consumption.
+- Millions of timestamps require significant RAM.
+
+---
+
+## 3. Sliding Window Counter
+
+Combines Fixed Window efficiency with Sliding Log accuracy using weighted approximation.
+
+### Formula
+
+```math
+Estimated Count =
+Current Window Count +
+(
+Previous Window Count
+×
+(1 - Overlap Percentage)
+)
+```
+
+### Example
+
+```text
+Previous Window = 100 requests
+Current Window = 20 requests
+
+30 seconds into a 60-second window
+
+Overlap = 50%
+
+Estimated Count
+
+= 20 + (100 × 0.50)
+
+= 70 requests
+```
+
+### How it Works
+
+Uses only:
+
+- Current window count
+- Previous window count
+
+Then computes a weighted rolling estimate.
+
+### Pros
+
+- Very memory efficient.
+- About 99% accurate.
+
+### Cons
+
+- Assumes requests were evenly distributed in the previous window.
+
+---
+
+## 4. Token Bucket (Industry Standard)
+
+A bucket contains tokens that refill continuously.
+
+```text
+          Token Refill
+         (5 Tokens/sec)
+                │
+                ▼
+
+        ┌────────────────┐
+        │ 🪙 🪙 🪙 🪙 🪙 │
+        │                │
+        │ Bucket Size=50 │
+        └───────┬────────┘
+                │
+
+      One token per request
+
+                ▼
+
+      API Request Approved
+```
+
+### Token Refill Formula
+
+```math
+New Tokens =
+min(
+Capacity,
+Current Tokens +
+(
+Elapsed Time
+×
+Refill Rate
+)
+)
+```
+
+### How it Works
+
+For each request:
+
+1. Compute elapsed time.
+2. Add regenerated tokens.
+3. Cap at bucket capacity.
+4. If tokens ≥ required:
+   - Consume token(s)
+   - Approve request
+5. Otherwise:
+   - Return **HTTP 429**
+   - Include `Retry-After`
+
+### Pros
+
+- Supports bursts.
+- Smooth long-term rate limiting.
+- Very memory efficient.
+- Widely used in production.
+
+### Cons
+
+- Requires tuning:
+  - Bucket Capacity
+  - Refill Rate
+
+---
+
+## 5. Leaky Bucket
+
+Requests enter a queue and leave at a constant rate.
+
+```text
+Incoming Requests
+(spiky traffic)
+
+        │
+        ▼
+
+ ┌──────────────────┐
+ │ 💧 💧 💧 💧 💧 │
+ │      Queue       │
+ └────────┬─────────┘
+          │
+
+ Constant Drain Rate
+
+          ▼
+
+ Smooth Outgoing Requests
+```
+
+### How it Works
+
+1. Incoming requests enter a FIFO queue.
+2. Queue has fixed capacity.
+3. If queue is full:
+   - Drop new requests.
+4. Worker processes requests at a constant speed.
+
+### Pros
+
+- Produces perfectly smooth traffic.
+- Protects downstream services.
+
+### Cons
+
+- Bursts increase latency.
+- Excess traffic may be dropped.
+
+---
+
+# 📊 Algorithm Comparison Matrix
+
+| Algorithm | Memory Footprint | Boundary Protection | Burst Support | Common Production Use |
+|------------|-----------------|---------------------|---------------|-----------------------|
+| **Fixed Window** | Extremely Low | ❌ Weak | ❌ No | Internal APIs, simple endpoints |
+| **Sliding Window Log** | High | ✅ Perfect | ❌ No | Login APIs, password reset, authentication |
+| **Sliding Window Counter** | Low | ✅ ~99% Accurate | ❌ No | CDN edge rules, high-throughput APIs |
+| **Token Bucket** | Low | ✅ Excellent | ✅ Yes | Stripe, AWS API Gateway, GitHub APIs |
+| **Leaky Bucket** | Medium | ✅ Excellent | ❌ No (queues instead) | Traffic shaping, network routers, downstream protection |
+
+---
+
+# 🎯 Quick Rule of Thumb
+
+| Use Case | Best Algorithm |
+|------------|----------------|
+| Simple internal APIs | Fixed Window |
+| Authentication endpoints | Sliding Window Log |
+| Public APIs with high traffic | Sliding Window Counter |
+| Production SaaS APIs | Token Bucket |
+| Network traffic shaping | Leaky Bucket |
+
+---
+
+# 🚀 Final Recommendation
+
+- **Fixed Window** → Simplest but suffers from boundary spikes.
+- **Sliding Window Log** → Most accurate but memory expensive.
+- **Sliding Window Counter** → Excellent balance between accuracy and memory.
+- **Token Bucket** → Industry standard for modern API gateways because it supports bursts while maintaining a stable average rate.
+- **Leaky Bucket** → Best when maintaining a constant outbound request rate is more important than minimizing latency.
