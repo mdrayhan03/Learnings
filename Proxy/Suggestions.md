@@ -91,10 +91,10 @@ Status legend: `Done` · `In Progress` · `Pending`
 
 | #   | Goal (Sub-phase)                                               | Status  |
 | --- | -------------------------------------------------------------- | ------- |
-| 7.1 | Authentication & authorization (API keys, JWT, OAuth2/OIDC)    | Pending |
-| 7.2 | Per-consumer rate limiting & quotas                            | Pending |
-| 7.3 | Request/response transformation                                | Pending |
-| 7.4 | Routing & versioning (canary, blue-green)                      | Pending |
+| 7.1 | Authentication & authorization (API keys, JWT, OAuth2/OIDC)    | Done    |
+| 7.2 | Per-consumer rate limiting & quotas                            | Done    |
+| 7.3 | Request/response transformation                                | Done    |
+| 7.4 | Routing & versioning (canary, blue-green)                      | Done    |
 | 7.5 | Request aggregation                                            | Pending |
 | 7.6 | Tools overview: Kong / KrakenD / Envoy                         | Pending |
 | 7.7 | Hands-on: Kong in Docker + key-auth + rate-limit plugins       | Pending |

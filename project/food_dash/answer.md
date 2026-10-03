@@ -1,0 +1,20 @@
+# PHASE 1: HLD
+## Step 1
+- **Ingestion Layer:** we will use eda microservice where we will have three service or order, auth, campaign and notifier service which will collect all the notification and send
+- **Routing & Filtering:** we will have a model where we will write all the opt rules then before sending from the microservices it checks and filters if ok then send else write cancel log
+- **Queue Topology:** we will use three queue to handle three different usecase and then we can use concurrency and more resources according to the priority,like which queue is more important then use more resources and concurrency like 2FA
+
+## Step 3
+- **Idempotency:** for every event we can redis key with a TTL so that next event we can check same event or not if same event then don't create new one use the existing one
+- **Retry Policy & Dead Letter Queue (DLQ):** if any event get third party 5xx error we can make that event status as error and we can check if continous 5/10 event get same error then for sometime we will stop that third party call then we will restart sending all the pending and errors. 
+here we have to handle in different way for error retry we will send as a batch and pending will run as normally. or here we can do more complex architecture like all the event third party call we will check the time it's like this event should call in 3min but if can't call in 3min then we will treat it as error event and do the batch retry, it will allow the latest as present and old as batch approach
+- **Rate Limiting & Provider Safety :** for rate limit we need to add a validator in our side like we will get the third party call rate limit information like per second, per minitue, per hour, per day, per week, per month if applicable then before calling third party we check all the validator then call so that we don't get rate limit and our api key won't ban
+
+## Architectural Questions to Answer in Your Plan
+1. **Queue Isolation:** here we can use three queue and all handle differently, three queue high, critical and low, for high here will be many notification we can assump because more order so we can use more concurrency here, for critical queue like 2FA we can't delay notification because it has a expiry so here also we need to use more concurrency, and for low queue can use batch approach and it's better we can seek for notification server low pressure then send
+
+2. **Preference Strategy:** we will cache the preference in the redis with a ttl like 30min so that this don't always hit the primary db and we will handle if user change the preference we will update in the db and redis in the same time so cache can get the new changes without waiting 30min.
+
+3. **Idempotency Strategy:** we will use a uuid on the notification request like then the first notification create but here is a problem every click it will create new uuid so same data but different uuid duplicate order and there is a another thing like one user can send same order twice after some time and user can try to auth twice so we can use a rate limit timer like one order we will create a token using the payload which is enable for 5 min like idempotency:order:user:ordername with TTL 5min in the cache. then if same order by same user happened before 5 min then it consider as duplicate and after 5min cache key will be deleted and user can do the same order again.
+
+4. **Failure Handling:** when SendGrid return 429 Too Many Requests error then in our app we should stop the notification sending via SendGrid and notification will store in the queue. or if we don't want any downtime or waiting then we can use multiple instance of notification sender third party and do rotation like if SendGrid-1 return 429 then rotate to SendGrid-2 and notification sending can continue. For 400 Bad Request Error from SendGrid that means we are sending garbeg or corrupted requestion to the SendGrid so we need to set filter and validator before sending to the SendGrid and which request can validate store in the error log so that we can check later why this malform request send and we can fix that bug

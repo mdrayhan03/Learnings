@@ -1,0 +1,45 @@
+version: '3.8'
+
+services:
+  gateway:
+    image: openresty/openresty:alpine
+    container_name: api_gateway_7_4
+    ports:
+      - "8000:80"
+    volumes:
+      - ./gateway.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - gateway-cache
+      - backend-v1-service
+      - backend-v2-service
+      - backend-enterprise-service
+
+  gateway-cache:
+    image: redis:alpine
+    container_name: gateway_cache_7_4
+    ports:
+      - "6379:6379"
+
+  backend-v1-service:
+    image: python:3.10-slim
+    container_name: backend_v1_service
+    working_dir: /app
+    command: sh -c "pip install flask && python app.py"
+    volumes:
+      - ./backend_v1:/app
+
+  backend-v2-service:
+    image: python:3.10-slim
+    container_name: backend_v2_service
+    working_dir: /app
+    command: sh -c "pip install flask && python app.py"
+    volumes:
+      - ./backend_v2:/app
+
+  backend-enterprise-service:
+    image: python:3.10-slim
+    container_name: backend_enterprise_service
+    working_dir: /app
+    command: sh -c "pip install flask && python app.py"
+    volumes:
+      - ./backend_enterprise:/app
