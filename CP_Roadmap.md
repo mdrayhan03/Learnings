@@ -58,11 +58,11 @@
 ### 1.2 Two Pointers & Sliding Window
 * Focus: Converting $O(N^2)$ brute force to $O(N)$ linear scans using pointers.
 * **LeetCode:**
-  1. LC #167 - Two Sum II - Input Array Is Sorted
-  2. LC #15 - 3Sum
-  3. LC #11 - Container With Most Water
-  4. LC #3 - Longest Substring Without Repeating Characters
-  5. LC #209 - Minimum Size Subarray Sum
+  1. LC #167 - Two Sum II - Input Array Is Sorted ✔
+  2. LC #15 - 3Sum ✔
+  3. LC #11 - Container With Most Water ✔
+  4. LC #3 - Longest Substring Without Repeating Characters ✔
+  5. LC #209 - Minimum Size Subarray Sum ✔
 * **Codeforces:**
   1. CF 279B - Books (1100)
   2. CF 676C - Vasya and String (1200)
