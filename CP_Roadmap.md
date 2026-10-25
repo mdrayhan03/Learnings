@@ -8,7 +8,7 @@
 ### 0.1 Basic Math, Modulo & Ad-Hoc
 * Focus: Modulo arithmetic, basic GCD, prime checks, digit extraction, and handling integer overflow.
 * **LeetCode:**
-  1. LC #9 - Palindrome Number
+  1. LC #9 - Palindrome Number ✔
   2. LC #258 - Add Digits
   3. LC #507 - Perfect Number
   4. LC #1979 - Find Greatest Common Divisor of Array
@@ -23,9 +23,9 @@
 ### 0.2 Linear Arrays, Strings & Simulation
 * Focus: Vector/string manipulation, frequency counting, and direct problem simulation.
 * **LeetCode:**
-  1. LC #1 - Two Sum
-  2. LC #26 - Remove Duplicates from Sorted Array
-  3. LC #242 - Valid Anagram
+  1. LC #1 - Two Sum ✔
+  2. LC #26 - Remove Duplicates from Sorted Array ✔
+  3. LC #242 - Valid Anagram ✔
   4. LC #387 - First Unique Character in a String
   5. LC #54 - Spiral Matrix
 * **Codeforces:**
