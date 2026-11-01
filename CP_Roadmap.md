@@ -14,8 +14,8 @@
   4. LC #1979 - Find Greatest Common Divisor of Array
   5. LC #2427 - Number of Common Factors
 * **Codeforces:**
-  1. CF 4A - Watermelon (800)
-  2. CF 231A - Team (800)
+  1. CF 4A - Watermelon (800) ✔
+  2. CF 231A - Team (800) ✔
   3. CF 1352A - Sum of Round Numbers (800)
   4. CF 1374A - Required Remainder (800)
   5. CF 1335A - Candies and Two Sisters (800)
@@ -29,11 +29,11 @@
   4. LC #387 - First Unique Character in a String
   5. LC #54 - Spiral Matrix ✔
 * **Codeforces:**
-  1. CF 263A - Beautiful Matrix (800)
-  2. CF 281A - Word Capitalization (800)
-  3. CF 580A - Kefa and First Steps (900)
-  4. CF 977A - Wrong Subtraction (800)
-  5. CF 112A - Petya and Strings (800)
+  1. CF 263A - Beautiful Matrix (800) ✔
+  2. CF 281A - Word Capitalization (800) ✔
+  3. CF 580A - Kefa and First Steps (900) ✔
+  4. CF 977A - Wrong Subtraction (800) ✔
+  5. CF 112A - Petya and Strings (800) ✔
 
 ---
 
@@ -49,8 +49,8 @@
   4. LC #724 - Find Pivot Index
   5. LC #1109 - Corporate Flight Bookings ✔
 * **Codeforces:**
-  1. CF 433B - Kuriyama Mirai's Stones (1200)
-  2. CF 313B - Ilya and Queries (1100)
+  1. CF 433B - Kuriyama Mirai's Stones (1200) ✔
+  2. CF 313B - Ilya and Queries (1100) ✔
   3. CF 295A - Greg and Array (1400)
   4. CF 466C - Number of Ways (1500)
   5. CF 1398C - Good Subarrays (1600)
