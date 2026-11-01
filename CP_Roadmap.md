@@ -27,7 +27,7 @@
   2. LC #26 - Remove Duplicates from Sorted Array ✔
   3. LC #242 - Valid Anagram ✔
   4. LC #387 - First Unique Character in a String
-  5. LC #54 - Spiral Matrix
+  5. LC #54 - Spiral Matrix ✔
 * **Codeforces:**
   1. CF 263A - Beautiful Matrix (800)
   2. CF 281A - Word Capitalization (800)
@@ -45,9 +45,9 @@
 * **LeetCode:**
   1. LC #303 - Range Sum Query - Immutable
   2. LC #304 - Range Sum Query 2D - Immutable
-  3. LC #560 - Subarray Sum Equals K
+  3. LC #560 - Subarray Sum Equals K ✔
   4. LC #724 - Find Pivot Index
-  5. LC #1109 - Corporate Flight Bookings
+  5. LC #1109 - Corporate Flight Bookings ✔
 * **Codeforces:**
   1. CF 433B - Kuriyama Mirai's Stones (1200)
   2. CF 313B - Ilya and Queries (1100)
@@ -73,11 +73,11 @@
 ### 1.3 Binary Search (Search Space & On Answer)
 * Focus: Standard search, lower/upper bound, and binary search on monotonic predicate functions.
 * **LeetCode:**
-  1. LC #704 - Binary Search
-  2. LC #33 - Search in Rotated Sorted Array
-  3. LC #34 - Find First and Last Position of Element in Sorted Array
-  4. LC #875 - Koko Eating Bananas
-  5. LC #1011 - Capacity To Ship Packages Within D Days
+  1. LC #704 - Binary Search ✔
+  2. LC #33 - Search in Rotated Sorted Array ✔
+  3. LC #34 - Find First and Last Position of Element in Sorted Array ✔
+  4. LC #875 - Koko Eating Bananas ✔
+  5. LC #1011 - Capacity To Ship Packages Within D Days ✔
 * **Codeforces:**
   1. CF 706B - Interesting drink (1100)
   2. CF 492B - Vanya and Lanterns (1200)
@@ -88,11 +88,11 @@
 ### 1.4 Greedy Algorithms
 * Focus: Identifying greedy choices, sort invariants, and exchange arguments.
 * **LeetCode:**
-  1. LC #55 - Jump Game
-  2. LC #45 - Jump Game II
-  3. LC #435 - Non-overlapping Intervals
-  4. LC #452 - Minimum Number of Arrows to Burst Balloons
-  5. LC #134 - Gas Station
+  1. LC #55 - Jump Game ✔
+  2. LC #45 - Jump Game II ✔
+  3. LC #435 - Non-overlapping Intervals ✔
+  4. LC #452 - Minimum Number of Arrows to Burst Balloons ✔
+  5. LC #134 - Gas Station ✔
 * **Codeforces:**
   1. CF 489B - BerSU Ball (1200)
   2. CF 1365C - Rotation Matching (1400)
@@ -103,11 +103,11 @@
 ### 1.5 Elementary Number Theory
 * Focus: Sieve of Eratosthenes, prime factorization in $O(\sqrt{N})$, and fast exponentiation ($O(\log N)$).
 * **LeetCode:**
-  1. LC #204 - Count Primes
-  2. LC #50 - Pow(x, n)
-  3. LC #69 - Sqrt(x)
-  4. LC #866 - Prime Palindrome
-  5. LC #650 - 2 Keys Keyboard
+  1. LC #204 - Count Primes ✔
+  2. LC #50 - Pow(x, n) ✔
+  3. LC #69 - Sqrt(x) ✔
+  4. LC #866 - Prime Palindrome ✔
+  5. LC #650 - 2 Keys Keyboard ✔
 * **Codeforces:**
   1. CF 230B - T-primes (1300)
   2. CF 1370A - Maximum GCD (800)
