@@ -51,8 +51,8 @@
 * **Codeforces:**
   1. CF 433B - Kuriyama Mirai's Stones (1200) ✔
   2. CF 313B - Ilya and Queries (1100) ✔
-  3. CF 295A - Greg and Array (1400)
-  4. CF 466C - Number of Ways (1500)
+  3. CF 295A - Greg and Array (1400) ✔
+  4. CF 466C - Number of Ways (1500) ✔
   5. CF 1398C - Good Subarrays (1600)
 
 ### 1.2 Two Pointers & Sliding Window
