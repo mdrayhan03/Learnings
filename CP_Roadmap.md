@@ -64,11 +64,11 @@
   4. LC #3 - Longest Substring Without Repeating Characters ✔
   5. LC #209 - Minimum Size Subarray Sum ✔
 * **Codeforces:**
-  1. CF 279B - Books (1100)
-  2. CF 676C - Vasya and String (1200)
+  1. CF 279B - Books (1100) ✔
+  2. CF 676C - Vasya and String (1200) ✔
   3. CF 381A - Sereja and Dima (800)
   4. CF 1462A - Favorite Sequence (800)
-  5. CF 1618C - Paint the Array (1100)
+  5. CF 1618C - Paint the Array (1100) ✔
 
 ### 1.3 Binary Search (Search Space & On Answer)
 * Focus: Standard search, lower/upper bound, and binary search on monotonic predicate functions.
@@ -79,9 +79,9 @@
   4. LC #875 - Koko Eating Bananas ✔
   5. LC #1011 - Capacity To Ship Packages Within D Days ✔
 * **Codeforces:**
-  1. CF 706B - Interesting drink (1100)
-  2. CF 492B - Vanya and Lanterns (1200)
-  3. CF 1352C - K-th Not Divisible by n (1200)
+  1. CF 706B - Interesting drink (1100) ✔
+  2. CF 492B - Vanya and Lanterns (1200) ✔
+  3. CF 1352C - K-th Not Divisible by n (1200) ✔
   4. CF 1619C - Wrong Addition (1200)
   5. CF 1201C - Maximum Median (1400)
 
