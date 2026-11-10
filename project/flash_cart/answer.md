@@ -1,0 +1,15 @@
+## Step - 1
+- **Traffic Shedding & Rate Limiting:** we will use recaptch for filter out bot traffic at the very beginning, it will save my transactional core database from bot traffic
+- **Reservation Pipeline:** we need 200,000 req/sec throughput so we can't do a massive db atomic lock for a order lifecycle, so for that first we will have a field where we will track temp order count and here we will use a small db lock that update temp lock and create a redis key with that user then against that redis key TTL 10 min we will do order lifecycle like checkout payment etc, then if that order do successfully then we will again use a small db lock that update the main component count and temp order and delete the redis, now here is a problem if redis TTL timeout before order successful then what will happened that count will be dead right, so we can use redis keyspace notification for redis TTL timeout, after timeout it will run a code that will update the temp order count because we can say it like that if redis TTL timeout happened then order is unsuccessful.
+- **Checkout Lifecycle:** for checkout lifecycle we will use the state design pattern with redis key what we have created via temp order count, now here is a problem this entire transaction should be atomic if one error then all need to rollback specially at the payment confirm phase or per order we need to track all the transaction in the state design pattern and if any state error then we need to add a reverse code to do manual rollback via code we need more throughput and latency so we can't use any longer db atomic lock right
+
+## Step - 3
+- **Abandoned Carts & TTL Expiration:** in per checkout lifecycle transaction we will check the redis key we have created at temp order count then if we use db atomic then it's easy to rollback, else we follow the checkout lifecycle manual rollback strategy
+- **Payment Gateway Timeout/Partial Failure:** in a payment gateway or any third party api after success there store that in their db, so if we get any network timeout or any error at payment gateway then we will retry for payment and first check is the prev request successful or not if successful then no need to retry else again send the request, now here is a thing we need to focus if payment gateway error then we can't just wait and retry that time it will block the queue so if failed then we will send it to another queue to handle that fail then check and if need then retry
+- **Hot-Key Database partitioning:** need to learn about this
+
+## Architectural Questions
+1. **Inventory Atomic:** 
+2. **Saga Execution:** it is same as step-3 payment gateway timeout problem solving
+3. **Hot-Key Distribution:** I need to learn that
+4. **Idempotent Payment Callback:** for this we already using redis key so before creating any payment request we need to check the redis key
