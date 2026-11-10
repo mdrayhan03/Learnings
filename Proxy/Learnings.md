@@ -1030,6 +1030,10 @@ server: cloudflare
 alt-svc: h3=":443"; ma=86400
 ```
 Notice cf-cache-status: HIT. That tells us this request never even touched the origin server. It was fulfilled in milliseconds right from the edge network. The age: 245321 header explicitly shows how many seconds this specific file has lived inside that edge node's memory cache since it was last fetched from the origin.
+<<<<<<< HEAD
+=======
+
+>>>>>>> 97e8c4d431e1c141b9484e2dcefb7790e73360f9
 # Phase 7: API Gateways
 ## 7.1: Authentication & Authorization at the Gateway
 In a naive system design, every single microservice handles its own security checks. Your BookingService, BillingService, and UserService would all independently have to contain duplicate code to parse database records or cryptographically verify tokens.
